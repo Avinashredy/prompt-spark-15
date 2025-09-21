@@ -14,7 +14,250 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      collection_prompts: {
+        Row: {
+          added_at: string
+          collection_id: string
+          id: string
+          prompt_id: string
+        }
+        Insert: {
+          added_at?: string
+          collection_id: string
+          id?: string
+          prompt_id: string
+        }
+        Update: {
+          added_at?: string
+          collection_id?: string
+          id?: string
+          prompt_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_prompts_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_prompts_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collections: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_public: boolean | null
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      comments: {
+        Row: {
+          created_at: string
+          id: string
+          parent_id: string | null
+          prompt_id: string
+          text: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          prompt_id: string
+          text: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          prompt_id?: string
+          text?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      likes: {
+        Row: {
+          created_at: string
+          id: string
+          prompt_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          prompt_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          prompt_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "likes_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      prompts: {
+        Row: {
+          category: Database["public"]["Enums"]["prompt_category"]
+          comments_count: number
+          created_at: string
+          description: string | null
+          id: string
+          likes_count: number
+          prompt_text: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["prompt_category"]
+          comments_count?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          likes_count?: number
+          prompt_text: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["prompt_category"]
+          comments_count?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          likes_count?: number
+          prompt_text?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      screenshots: {
+        Row: {
+          alt_text: string | null
+          created_at: string
+          display_order: number | null
+          id: string
+          image_url: string
+          prompt_id: string
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          image_url: string
+          prompt_id: string
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          image_url?: string
+          prompt_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "screenshots_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +266,16 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      prompt_category:
+        | "art"
+        | "coding"
+        | "writing"
+        | "marketing"
+        | "productivity"
+        | "business"
+        | "education"
+        | "entertainment"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +402,18 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      prompt_category: [
+        "art",
+        "coding",
+        "writing",
+        "marketing",
+        "productivity",
+        "business",
+        "education",
+        "entertainment",
+        "other",
+      ],
+    },
   },
 } as const
