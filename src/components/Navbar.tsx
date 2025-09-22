@@ -1,14 +1,19 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Search, Plus, User, Settings, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { ProfileModal } from './ProfileModal';
 
 const Navbar = () => {
   const { user, signOut } = useAuth();
+  const { profile } = useProfile();
   const navigate = useNavigate();
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -57,24 +62,22 @@ const Navbar = () => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.user_metadata?.avatar_url} alt={user.email} />
+                      <AvatarImage src={profile?.avatar_url} alt={profile?.username} />
                       <AvatarFallback>
-                        {user.email?.charAt(0).toUpperCase()}
+                        {profile?.username?.[0]?.toUpperCase() || user.email?.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile" className="flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      Profile
-                    </Link>
+                  <DropdownMenuItem onClick={() => setIsProfileModalOpen(true)}>
+                    <User className="mr-2 h-4 w-4" />
+                    Edit Profile
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/library" className="flex items-center">
                       <Settings className="mr-2 h-4 w-4" />
-                      Library
+                      My Library
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -97,6 +100,11 @@ const Navbar = () => {
           )}
         </div>
       </div>
+      
+      <ProfileModal 
+        open={isProfileModalOpen}
+        onOpenChange={setIsProfileModalOpen}
+      />
     </header>
   );
 };
