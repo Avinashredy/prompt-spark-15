@@ -96,7 +96,11 @@ const Index = () => {
           <h2 className="text-3xl font-bold text-center mb-12">Browse by Category</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {categories.map((category) => (
-              <Card key={category.name} className="cursor-pointer hover:shadow-lg transition-shadow">
+              <Card 
+                key={category.name} 
+                className="cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => navigate(`/explore?category=${category.name.toLowerCase()}`)}
+              >
                 <CardContent className="p-6 text-center">
                   <category.icon className="h-12 w-12 mx-auto mb-4 text-primary" />
                   <h3 className="font-semibold mb-2">{category.name}</h3>

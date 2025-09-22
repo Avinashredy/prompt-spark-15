@@ -72,9 +72,9 @@ const Navbar = () => {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/collections" className="flex items-center">
+                    <Link to="/library" className="flex items-center">
                       <Settings className="mr-2 h-4 w-4" />
-                      Collections
+                      Library
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
