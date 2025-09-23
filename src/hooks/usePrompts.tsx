@@ -36,11 +36,11 @@ export const usePrompts = () => {
   }) => {
     setLoading(true);
     
+    // First, get prompts with screenshots
     let query = supabase
       .from('prompts')
       .select(`
         *,
-        profiles (username),
         screenshots (id, image_url, alt_text)
       `);
 
@@ -63,15 +63,34 @@ export const usePrompts = () => {
       query = query.order('created_at', { ascending: false });
     }
 
-    const { data, error } = await query;
+    const { data: promptsData, error } = await query;
 
     if (error) {
       console.error('Error fetching prompts:', error);
       setPrompts([]);
-    } else {
-      setPrompts((data as any) || []);
+      setLoading(false);
+      return;
     }
+
+    // Get unique user IDs to fetch profiles
+    const userIds = [...new Set(promptsData?.map(p => p.user_id) || [])];
     
+    // Fetch profiles for these users
+    const { data: profilesData } = await supabase
+      .from('profiles')
+      .select('user_id, username')
+      .in('user_id', userIds);
+
+    // Create a map of user_id to profile
+    const profilesMap = new Map(profilesData?.map(p => [p.user_id, p]) || []);
+
+    // Combine prompts with profiles
+    const promptsWithProfiles = promptsData?.map(prompt => ({
+      ...prompt,
+      profiles: profilesMap.get(prompt.user_id) || null
+    })) || [];
+
+    setPrompts(promptsWithProfiles as any);
     setLoading(false);
   };
 
@@ -91,19 +110,28 @@ export const usePrompts = () => {
           user_id: user.id,
         }
       ])
-      .select(`
-        *,
-        profiles (username),
-        screenshots (id, image_url, alt_text)
-      `)
+      .select('*')
       .single();
 
     if (error) {
       return { error: error.message };
     }
 
-    setPrompts(prev => [(data as any), ...prev]);
-    return { data };
+    // Add user profile to the created prompt
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('user_id, username')
+      .eq('user_id', user.id)
+      .single();
+
+    const promptWithProfile = {
+      ...data,
+      profiles: profileData,
+      screenshots: []
+    };
+
+    setPrompts(prev => [promptWithProfile as any, ...prev]);
+    return { data: promptWithProfile };
   };
 
   const deletePrompt = async (promptId: string) => {
