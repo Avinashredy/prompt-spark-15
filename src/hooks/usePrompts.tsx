@@ -40,6 +40,7 @@ export const usePrompts = () => {
       .from('prompts')
       .select(`
         *,
+        profiles (username),
         screenshots (id, image_url, alt_text)
       `);
 
@@ -92,6 +93,7 @@ export const usePrompts = () => {
       ])
       .select(`
         *,
+        profiles (username),
         screenshots (id, image_url, alt_text)
       `)
       .single();

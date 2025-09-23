@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { usePrompts } from '@/hooks/usePrompts';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +14,7 @@ const Library = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const { prompts, loading, fetchPrompts } = usePrompts();
 
   // Redirect if not authenticated
   if (!user) {
@@ -20,81 +22,27 @@ const Library = () => {
     return null;
   }
 
-  // Demo data for user's content
-  const userPrompts = [
-    {
-      id: 1,
-      title: "My Creative Assistant",
-      description: "Personal writing helper for creative projects",
-      category: "writing",
-      likes: 45,
-      comments: 12,
-      createdAt: "2024-01-10",
-      status: "published"
-    },
-    {
-      id: 2,
-      title: "Code Documentation Helper",
-      description: "Generate clear documentation for my projects",
-      category: "coding",
-      likes: 23,
-      comments: 5,
-      createdAt: "2024-01-08",
-      status: "published"
+  useEffect(() => {
+    if (user) {
+      fetchPrompts({ userId: user.id });
     }
-  ];
+  }, [user]);
 
-  const savedPrompts = [
-    {
-      id: 3,
-      title: "Art Style Generator",
-      description: "Create unique artistic styles for image generation",
-      category: "art",
-      likes: 234,
-      comments: 45,
-      author: "pixel_artist",
-      savedAt: "2024-01-12"
-    },
-    {
-      id: 4,
-      title: "Business Plan Creator",
-      description: "Comprehensive business planning assistant",
-      category: "business",
-      likes: 156,
-      comments: 32,
-      author: "entrepreneur_pro",
-      savedAt: "2024-01-09"
-    }
-  ];
+  // Filter user's prompts
+  const filteredUserPrompts = prompts.filter(prompt =>
+    prompt.title.toLowerCase().includes(searchQuery.toLowerCase()) && 
+    prompt.user_id === user?.id
+  );
 
-  const collections = [
-    {
-      id: 1,
-      name: "Writing Tools",
-      description: "My favorite prompts for creative writing",
-      promptCount: 8,
-      isPublic: true,
-      createdAt: "2024-01-05"
-    },
-    {
-      id: 2,
-      name: "Development Helpers",
-      description: "Coding and development related prompts",
-      promptCount: 12,
-      isPublic: false,
-      createdAt: "2024-01-03"
-    }
-  ];
+  // Mock data for saved prompts and collections (to be implemented later)
+  const savedPrompts: any[] = [];
+  const collections: any[] = [];
 
-  const filteredUserPrompts = userPrompts.filter(prompt =>
+  const filteredSavedPrompts = savedPrompts.filter((prompt: any) =>
     prompt.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredSavedPrompts = savedPrompts.filter(prompt =>
-    prompt.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const filteredCollections = collections.filter(collection =>
+  const filteredCollections = collections.filter((collection: any) =>
     collection.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -129,7 +77,7 @@ const Library = () => {
           <TabsList>
             <TabsTrigger value="my-prompts" className="flex items-center gap-2">
               <UploadIcon className="h-4 w-4" />
-              My Prompts ({userPrompts.length})
+              My Prompts ({filteredUserPrompts.length})
             </TabsTrigger>
             <TabsTrigger value="saved" className="flex items-center gap-2">
               <Bookmark className="h-4 w-4" />
@@ -151,16 +99,18 @@ const Library = () => {
               </Button>
             </div>
 
-            {filteredUserPrompts.length > 0 ? (
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Loading your prompts...</p>
+              </div>
+            ) : filteredUserPrompts.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredUserPrompts.map((prompt) => (
                   <Card key={prompt.id} className="cursor-pointer hover:shadow-lg transition-shadow">
                     <CardHeader>
                       <div className="flex items-center justify-between mb-2">
                         <Badge variant="secondary" className="capitalize">{prompt.category}</Badge>
-                        <Badge variant={prompt.status === 'published' ? 'default' : 'secondary'}>
-                          {prompt.status}
-                        </Badge>
+                        <Badge variant="default">Published</Badge>
                       </div>
                       <CardTitle className="text-lg">{prompt.title}</CardTitle>
                       <CardDescription>{prompt.description}</CardDescription>
@@ -170,14 +120,16 @@ const Library = () => {
                         <div className="flex items-center gap-4 text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Heart className="h-4 w-4" />
-                            {prompt.likes}
+                            {prompt.likes_count}
                           </div>
                           <div className="flex items-center gap-1">
                             <MessageCircle className="h-4 w-4" />
-                            {prompt.comments}
+                            {prompt.comments_count}
                           </div>
                         </div>
-                        <span className="text-muted-foreground">{prompt.createdAt}</span>
+                        <span className="text-muted-foreground">
+                          {new Date(prompt.created_at).toLocaleDateString()}
+                        </span>
                       </div>
                     </CardContent>
                   </Card>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { usePrompts } from '@/hooks/usePrompts';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ const Upload = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { createPrompt, uploadScreenshot } = usePrompts();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -94,9 +96,24 @@ const Upload = () => {
     setIsUploading(true);
 
     try {
-      // Here you would implement the actual upload logic with Supabase
-      // For now, we'll simulate the upload
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Create the prompt in the database
+      const { data: newPrompt, error } = await createPrompt({
+        title: formData.title,
+        description: formData.description || undefined,
+        prompt_text: formData.promptText,
+        category: formData.category as any
+      });
+      
+      if (error) {
+        throw new Error(error);
+      }
+      
+      // Upload screenshots if any
+      if (screenshots.length > 0 && newPrompt) {
+        for (const [index, file] of screenshots.entries()) {
+          await uploadScreenshot(newPrompt.id, file, `Screenshot ${index + 1} for ${formData.title}`);
+        }
+      }
       
       toast({
         title: "Prompt uploaded successfully!",
@@ -113,13 +130,14 @@ const Upload = () => {
       });
       setScreenshots([]);
       
-      // Navigate to the new prompt (in a real app, you'd have the ID)
+      // Navigate to explore page
       navigate('/explore');
       
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "Upload failed",
-        description: "Something went wrong. Please try again.",
+        description: error instanceof Error ? error.message : "Something went wrong. Please try again.",
         variant: "destructive"
       });
     } finally {

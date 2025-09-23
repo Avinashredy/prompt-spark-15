@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
+import { usePrompts } from '@/hooks/usePrompts';
+import { useLikes } from '@/hooks/useLikes';
+import { PromptDetailModal } from '@/components/PromptDetailModal';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,82 +11,19 @@ import { Heart, MessageCircle, User, TrendingUp, Clock, Flame } from 'lucide-rea
 
 const Trending = () => {
   const [timeframe, setTimeframe] = useState('week');
+  const [selectedPrompt, setSelectedPrompt] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { prompts, loading, fetchPrompts } = usePrompts();
+  const { isLiked } = useLikes();
 
-  // Demo data for trending prompts
-  const trendingPrompts = [
-    {
-      id: 1,
-      title: "Creative Writing Assistant",
-      description: "Generate compelling stories with rich character development and engaging plots that captivate readers",
-      category: "writing",
-      likes: 342,
-      comments: 67,
-      author: "storyteller_ai",
-      screenshot: "/placeholder.svg",
-      trend: "+125%",
-      rank: 1
-    },
-    {
-      id: 2,
-      title: "Art Style Descriptor",
-      description: "Describe artistic styles and techniques for AI image generation with precise vocabulary",
-      category: "art",
-      likes: 289,
-      comments: 54,
-      author: "pixel_artist",
-      screenshot: "/placeholder.svg",
-      trend: "+98%",
-      rank: 2
-    },
-    {
-      id: 3,
-      title: "Code Review Expert",
-      description: "Comprehensive code analysis and improvement suggestions for better software quality",
-      category: "coding",
-      likes: 234,
-      comments: 43,
-      author: "dev_master",
-      screenshot: "/placeholder.svg",
-      trend: "+87%",
-      rank: 3
-    },
-    {
-      id: 4,
-      title: "Marketing Copy Generator",
-      description: "Create engaging marketing content that converts visitors into customers effectively",
-      category: "marketing",
-      likes: 198,
-      comments: 38,
-      author: "growth_hacker",
-      screenshot: "/placeholder.svg",
-      trend: "+76%",
-      rank: 4
-    },
-    {
-      id: 5,
-      title: "Business Plan Generator",
-      description: "Create comprehensive business plans with financial projections and market analysis",
-      category: "business",
-      likes: 167,
-      comments: 29,
-      author: "entrepreneur_pro",
-      screenshot: "/placeholder.svg",
-      trend: "+65%",
-      rank: 5
-    },
-    {
-      id: 6,
-      title: "Educational Content Creator",
-      description: "Design engaging educational materials and lesson plans for effective learning",
-      category: "education",
-      likes: 145,
-      comments: 25,
-      author: "edu_innovator",
-      screenshot: "/placeholder.svg",
-      trend: "+54%",
-      rank: 6
-    }
-  ];
+  useEffect(() => {
+    fetchPrompts({ trending: true });
+  }, [timeframe]);
+
+  const handlePromptClick = (prompt: any) => {
+    setSelectedPrompt(prompt);
+    setIsModalOpen(true);
+  };
 
   const getRankColor = (rank: number) => {
     if (rank === 1) return "text-yellow-500";
@@ -162,58 +102,76 @@ const Trending = () => {
 
         {/* Trending Prompts */}
         <div className="space-y-6">
-          {trendingPrompts.map((prompt, index) => (
-            <Card key={prompt.id} className="cursor-pointer hover:shadow-lg transition-shadow">
-              <div className="flex flex-col md:flex-row">
-                <div className="md:w-64 aspect-video md:aspect-square bg-muted flex items-center justify-center">
-                  <img 
-                    src={prompt.screenshot} 
-                    alt={prompt.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="flex-1">
-                  <CardHeader>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <div className={`flex items-center gap-1 font-bold text-lg ${getRankColor(prompt.rank)}`}>
-                          {getRankIcon(prompt.rank)}
-                          #{prompt.rank}
-                        </div>
-                        <Badge variant="secondary" className="capitalize">{prompt.category}</Badge>
-                        <Badge variant="outline" className="text-green-600">
-                          {prompt.trend}
-                        </Badge>
-                      </div>
-                    </div>
-                    <CardTitle className="text-xl">{prompt.title}</CardTitle>
-                    <CardDescription className="text-base">{prompt.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <Heart className="h-4 w-4 text-red-500" />
-                          <span className="font-medium">{prompt.likes}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <MessageCircle className="h-4 w-4 text-blue-500" />
-                          <span className="font-medium">{prompt.comments}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          <span>{prompt.author}</span>
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Loading trending prompts...</p>
+            </div>
+          ) : prompts.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No trending prompts found.</p>
+            </div>
+          ) : (
+            prompts.map((prompt, index) => (
+              <Card 
+                key={prompt.id} 
+                className="cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => handlePromptClick(prompt)}
+              >
+                <div className="flex flex-col md:flex-row">
+                  <div className="md:w-64 aspect-video md:aspect-square bg-muted flex items-center justify-center">
+                    {prompt.screenshots && prompt.screenshots.length > 0 ? (
+                      <img 
+                        src={prompt.screenshots[0].image_url} 
+                        alt={prompt.screenshots[0].alt_text || prompt.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-muted-foreground">No preview</div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <CardHeader>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className={`flex items-center gap-1 font-bold text-lg ${getRankColor(index + 1)}`}>
+                            {getRankIcon(index + 1)}
+                            #{index + 1}
+                          </div>
+                          <Badge variant="secondary" className="capitalize">{prompt.category}</Badge>
+                          <Badge variant="outline" className="text-green-600">
+                            Trending
+                          </Badge>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm">
-                        View Details
-                      </Button>
-                    </div>
-                  </CardContent>
+                      <CardTitle className="text-xl">{prompt.title}</CardTitle>
+                      <CardDescription className="text-base">{prompt.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Heart className={`h-4 w-4 ${isLiked(prompt.id) ? 'fill-current text-red-500' : 'text-red-500'}`} />
+                            <span className="font-medium">{prompt.likes_count}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MessageCircle className="h-4 w-4 text-blue-500" />
+                            <span className="font-medium">{prompt.comments_count}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4" />
+                            <span>{prompt.profiles?.username || 'Anonymous'}</span>
+                          </div>
+                        </div>
+                        <Button variant="outline" size="sm">
+                          View Details
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ))
+          )}
         </div>
 
         {/* Load more */}
@@ -222,6 +180,12 @@ const Trending = () => {
             Load More Trending Prompts
           </Button>
         </div>
+
+        <PromptDetailModal 
+          prompt={selectedPrompt}
+          open={isModalOpen}
+          onOpenChange={setIsModalOpen}
+        />
       </div>
     </div>
   );
