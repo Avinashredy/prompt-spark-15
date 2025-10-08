@@ -6,13 +6,22 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Heart, MessageCircle, User, Calendar, Copy, Trash2, Edit3 } from 'lucide-react';
+import { Heart, MessageCircle, User, Calendar, Copy, Trash2, Bookmark, FolderPlus } from 'lucide-react';
 import { Prompt } from '@/hooks/usePrompts';
 import { useLikes } from '@/hooks/useLikes';
 import { useComments } from '@/hooks/useComments';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { useSavedPrompts } from '@/hooks/useSavedPrompts';
+import { useCollections } from '@/hooks/useCollections';
+import { usePromptViews } from '@/hooks/usePromptViews';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface PromptDetailModalProps {
   prompt: Prompt | null;
@@ -24,9 +33,19 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
   const { user } = useAuth();
   const { toggleLike, isLiked } = useLikes();
   const { comments, addComment, deleteComment, loading: commentsLoading } = useComments(prompt?.id);
+  const { toggleSave, isSaved } = useSavedPrompts();
+  const { collections, addPromptToCollection } = useCollections();
+  const { trackView } = usePromptViews();
   const { toast } = useToast();
   const [newComment, setNewComment] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+  // Track view when modal opens
+  useEffect(() => {
+    if (prompt && open) {
+      trackView(prompt.id);
+    }
+  }, [prompt, open]);
 
   const handleLike = async () => {
     if (!prompt || !user) {
@@ -44,6 +63,51 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
         title: "Error",
         description: result.error,
         variant: "destructive",
+      });
+    }
+  };
+
+  const handleSave = async () => {
+    if (!prompt || !user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to save prompts.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const result = await toggleSave(prompt.id);
+    if (result.error) {
+      toast({
+        title: "Error",
+        description: result.error,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: result.isSaved ? "Saved!" : "Removed",
+        description: result.isSaved 
+          ? "Prompt saved to your library." 
+          : "Prompt removed from your library.",
+      });
+    }
+  };
+
+  const handleAddToCollection = async (collectionId: string) => {
+    if (!prompt || !user) return;
+
+    const result = await addPromptToCollection(collectionId, prompt.id);
+    if (result.error) {
+      toast({
+        title: "Error",
+        description: result.error,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Added to collection",
+        description: "Prompt added to your collection.",
       });
     }
   };
@@ -102,6 +166,7 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
   if (!prompt) return null;
 
   const liked = isLiked(prompt.id);
+  const saved = isSaved(prompt.id);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -134,6 +199,39 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
                 <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
                 {prompt.likes_count}
               </Button>
+              <Button
+                variant={saved ? "default" : "outline"}
+                size="sm"
+                onClick={handleSave}
+                className="flex items-center gap-1"
+              >
+                <Bookmark className={`h-4 w-4 ${saved ? 'fill-current' : ''}`} />
+                {saved ? 'Saved' : 'Save'}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex items-center gap-1">
+                    <FolderPlus className="h-4 w-4" />
+                    Add to Collection
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {collections.length === 0 ? (
+                    <DropdownMenuItem disabled>
+                      No collections yet
+                    </DropdownMenuItem>
+                  ) : (
+                    collections.map((collection) => (
+                      <DropdownMenuItem
+                        key={collection.id}
+                        onClick={() => handleAddToCollection(collection.id)}
+                      >
+                        {collection.name}
+                      </DropdownMenuItem>
+                    ))
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 variant="outline"
                 size="sm"

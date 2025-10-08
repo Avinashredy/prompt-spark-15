@@ -184,6 +184,27 @@ export type Database = {
         }
         Relationships: []
       }
+      prompt_views: {
+        Row: {
+          id: string
+          prompt_id: string
+          user_id: string | null
+          viewed_at: string
+        }
+        Insert: {
+          id?: string
+          prompt_id: string
+          user_id?: string | null
+          viewed_at?: string
+        }
+        Update: {
+          id?: string
+          prompt_id?: string
+          user_id?: string | null
+          viewed_at?: string
+        }
+        Relationships: []
+      }
       prompts: {
         Row: {
           category: Database["public"]["Enums"]["prompt_category"]
@@ -196,6 +217,7 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          views_count: number
         }
         Insert: {
           category?: Database["public"]["Enums"]["prompt_category"]
@@ -208,6 +230,7 @@ export type Database = {
           title: string
           updated_at?: string
           user_id: string
+          views_count?: number
         }
         Update: {
           category?: Database["public"]["Enums"]["prompt_category"]
@@ -219,6 +242,28 @@ export type Database = {
           prompt_text?: string
           title?: string
           updated_at?: string
+          user_id?: string
+          views_count?: number
+        }
+        Relationships: []
+      }
+      saved_prompts: {
+        Row: {
+          created_at: string
+          id: string
+          prompt_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          prompt_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          prompt_id?: string
           user_id?: string
         }
         Relationships: []

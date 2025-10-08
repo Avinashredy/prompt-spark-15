@@ -1,49 +1,28 @@
 import { useAuth } from '@/hooks/useAuth';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Heart, MessageCircle, User, Sparkles, TrendingUp, Zap } from 'lucide-react';
+import { usePrompts } from '@/hooks/usePrompts';
+import { PromptDetailModal } from '@/components/PromptDetailModal';
 
 const Index = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const { prompts, loading: promptsLoading, fetchPrompts } = usePrompts();
+  const [selectedPrompt, setSelectedPrompt] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Demo data for trending prompts
-  const trendingPrompts = [
-    {
-      id: 1,
-      title: "Creative Writing Assistant",
-      description: "Generate compelling stories with rich character development",
-      category: "writing",
-      likes: 142,
-      comments: 28,
-      author: "storyteller_ai",
-      screenshot: "/placeholder.svg"
-    },
-    {
-      id: 2,
-      title: "Code Review Expert",
-      description: "Comprehensive code analysis and improvement suggestions",
-      category: "coding",
-      likes: 89,
-      comments: 15,
-      author: "dev_master",
-      screenshot: "/placeholder.svg"
-    },
-    {
-      id: 3,
-      title: "Marketing Copy Generator",
-      description: "Create engaging marketing content that converts",
-      category: "marketing",
-      likes: 67,
-      comments: 12,
-      author: "growth_hacker",
-      screenshot: "/placeholder.svg"
-    }
-  ];
+  // Fetch trending prompts
+  useEffect(() => {
+    fetchPrompts({ trending: true });
+  }, []);
+
+  // Top trending prompts to display
+  const trendingPrompts = prompts.slice(0, 3);
 
   const categories = [
     { name: "Art", icon: Sparkles, count: 234 },
@@ -122,42 +101,63 @@ const Index = () => {
             </Button>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {trendingPrompts.map((prompt) => (
-              <Card key={prompt.id} className="cursor-pointer hover:shadow-lg transition-shadow">
-                <div className="aspect-video bg-muted rounded-t-lg flex items-center justify-center">
-                  <img 
-                    src={prompt.screenshot} 
-                    alt={prompt.title}
-                    className="w-full h-full object-cover rounded-t-lg"
-                  />
-                </div>
-                <CardHeader>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="secondary">{prompt.category}</Badge>
+            {promptsLoading ? (
+              <div className="col-span-full text-center py-12">
+                <p className="text-muted-foreground">Loading trending prompts...</p>
+              </div>
+            ) : trendingPrompts.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <p className="text-muted-foreground">No trending prompts yet.</p>
+              </div>
+            ) : (
+              trendingPrompts.map((prompt) => (
+                <Card 
+                  key={prompt.id} 
+                  className="cursor-pointer hover:shadow-lg transition-shadow"
+                  onClick={() => {
+                    setSelectedPrompt(prompt);
+                    setIsModalOpen(true);
+                  }}
+                >
+                  <div className="aspect-video bg-muted rounded-t-lg flex items-center justify-center">
+                    {prompt.screenshots && prompt.screenshots.length > 0 ? (
+                      <img 
+                        src={prompt.screenshots[0].image_url} 
+                        alt={prompt.screenshots[0].alt_text || prompt.title}
+                        className="w-full h-full object-cover rounded-t-lg"
+                      />
+                    ) : (
+                      <div className="text-muted-foreground">No preview</div>
+                    )}
                   </div>
-                  <CardTitle className="text-lg">{prompt.title}</CardTitle>
-                  <CardDescription>{prompt.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Heart className="h-4 w-4" />
-                        {prompt.likes}
+                  <CardHeader>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="secondary" className="capitalize">{prompt.category}</Badge>
+                    </div>
+                    <CardTitle className="text-lg">{prompt.title}</CardTitle>
+                    <CardDescription>{prompt.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Heart className="h-4 w-4" />
+                          {prompt.likes_count}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MessageCircle className="h-4 w-4" />
+                          {prompt.comments_count}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <MessageCircle className="h-4 w-4" />
-                        {prompt.comments}
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <User className="h-4 w-4" />
+                        {prompt.profiles?.username || 'Anonymous'}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <User className="h-4 w-4" />
-                      {prompt.author}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -176,6 +176,12 @@ const Index = () => {
           </div>
         </section>
       )}
+
+      <PromptDetailModal 
+        prompt={selectedPrompt}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+      />
     </div>
   );
 };

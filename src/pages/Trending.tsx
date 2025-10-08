@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { usePrompts } from '@/hooks/usePrompts';
 import { useLikes } from '@/hooks/useLikes';
+import { useAnalytics } from '@/hooks/useAnalytics';
 import { PromptDetailModal } from '@/components/PromptDetailModal';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,7 @@ const Trending = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { prompts, loading, fetchPrompts } = usePrompts();
   const { isLiked } = useLikes();
+  const { totalViews, newPrompts, activeUsers, loading: analyticsLoading } = useAnalytics();
 
   useEffect(() => {
     fetchPrompts({ trending: true });
@@ -67,11 +69,12 @@ const Trending = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Views</p>
-                  <p className="text-2xl font-bold">2.4M</p>
+                  <p className="text-2xl font-bold">
+                    {analyticsLoading ? '...' : totalViews.toLocaleString()}
+                  </p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-green-500" />
               </div>
-              <p className="text-xs text-green-500 mt-2">+12% from last week</p>
             </CardContent>
           </Card>
           <Card>
@@ -79,11 +82,12 @@ const Trending = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">New Prompts</p>
-                  <p className="text-2xl font-bold">156</p>
+                  <p className="text-2xl font-bold">
+                    {analyticsLoading ? '...' : newPrompts}
+                  </p>
                 </div>
                 <Flame className="h-8 w-8 text-orange-500" />
               </div>
-              <p className="text-xs text-orange-500 mt-2">+23% from last week</p>
             </CardContent>
           </Card>
           <Card>
@@ -91,11 +95,12 @@ const Trending = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Active Users</p>
-                  <p className="text-2xl font-bold">8.9K</p>
+                  <p className="text-2xl font-bold">
+                    {analyticsLoading ? '...' : activeUsers}
+                  </p>
                 </div>
                 <Clock className="h-8 w-8 text-blue-500" />
               </div>
-              <p className="text-xs text-blue-500 mt-2">+8% from last week</p>
             </CardContent>
           </Card>
         </div>

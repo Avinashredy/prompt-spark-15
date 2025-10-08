@@ -14,10 +14,18 @@ const Navbar = () => {
   const { profile } = useProfile();
   const navigate = useNavigate();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/explore?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
   };
 
   return (
@@ -25,7 +33,7 @@ const Navbar = () => {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center space-x-6">
           <Link to="/" className="flex items-center space-x-2">
-            <div className="font-bold text-xl text-primary">PromptHub</div>
+            <div className="font-bold text-xl text-primary">myprompts.world</div>
           </Link>
           
           <nav className="hidden md:flex items-center space-x-6">
@@ -39,13 +47,15 @@ const Navbar = () => {
         </div>
 
         <div className="flex-1 max-w-lg mx-6">
-          <div className="relative">
+          <form onSubmit={handleSearch} className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search prompts..."
               className="pl-10 w-full"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
-          </div>
+          </form>
         </div>
 
         <div className="flex items-center space-x-4">
