@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Heart, MessageCircle, User, Calendar, Copy, Trash2, Bookmark, FolderPlus } from 'lucide-react';
+import { Heart, MessageCircle, User, Calendar, Copy, Trash2, Bookmark, FolderPlus, Lock, ExternalLink } from 'lucide-react';
 import { Prompt } from '@/hooks/usePrompts';
 import { useLikes } from '@/hooks/useLikes';
 import { useComments } from '@/hooks/useComments';
@@ -16,6 +16,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { useSavedPrompts } from '@/hooks/useSavedPrompts';
 import { useCollections } from '@/hooks/useCollections';
 import { usePromptViews } from '@/hooks/usePromptViews';
+import { usePromptPurchases } from '@/hooks/usePromptPurchases';
+import { CreateCollectionDialog } from './CreateCollectionDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,9 +38,12 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
   const { toggleSave, isSaved } = useSavedPrompts();
   const { collections, addPromptToCollection } = useCollections();
   const { trackView } = usePromptViews();
+  const { hasPurchased, purchasePrompt } = usePromptPurchases();
   const { toast } = useToast();
   const [newComment, setNewComment] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [showCreateCollection, setShowCreateCollection] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
 
   // Track view when modal opens
   useEffect(() => {
@@ -112,6 +117,34 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
     }
   };
 
+  const handlePurchasePrompt = async () => {
+    if (!prompt || !user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to purchase prompts.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsPurchasing(true);
+    const result = await purchasePrompt(prompt.id, prompt.price || 0);
+    
+    if (result.error) {
+      toast({
+        title: "Purchase failed",
+        description: result.error,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Purchase successful!",
+        description: "You now have access to this prompt.",
+      });
+    }
+    setIsPurchasing(false);
+  };
+
   const handleCopyPrompt = () => {
     if (!prompt) return;
     
@@ -167,9 +200,17 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
 
   const liked = isLiked(prompt.id);
   const saved = isSaved(prompt.id);
+  const isPaid = prompt.is_paid && prompt.user_id !== user?.id;
+  const purchased = hasPurchased(prompt.id);
+  const canViewContent = !isPaid || purchased || prompt.user_id === user?.id;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <CreateCollectionDialog 
+        open={showCreateCollection} 
+        onOpenChange={setShowCreateCollection}
+      />
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <div className="flex items-center gap-4">
@@ -217,18 +258,23 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   {collections.length === 0 ? (
-                    <DropdownMenuItem disabled>
-                      No collections yet
+                    <DropdownMenuItem onClick={() => setShowCreateCollection(true)}>
+                      Create your first collection
                     </DropdownMenuItem>
                   ) : (
-                    collections.map((collection) => (
-                      <DropdownMenuItem
-                        key={collection.id}
-                        onClick={() => handleAddToCollection(collection.id)}
-                      >
-                        {collection.name}
+                    <>
+                      {collections.map((collection) => (
+                        <DropdownMenuItem
+                          key={collection.id}
+                          onClick={() => handleAddToCollection(collection.id)}
+                        >
+                          {collection.name}
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuItem onClick={() => setShowCreateCollection(true)}>
+                        + Create new collection
                       </DropdownMenuItem>
-                    ))
+                    </>
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -269,13 +315,78 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
             </div>
           )}
 
-          {/* Prompt Text */}
-          <div className="flex-shrink-0 mb-6">
-            <h3 className="font-semibold mb-2">Prompt</h3>
-            <div className="bg-muted p-4 rounded-lg">
-              <pre className="whitespace-pre-wrap text-sm font-mono">{prompt.prompt_text}</pre>
+          {/* Pricing Info */}
+          {isPaid && (
+            <div className="flex-shrink-0 mb-4">
+              <div className="bg-muted p-4 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Lock className="h-5 w-5" />
+                  <div>
+                    <p className="font-semibold">Paid Prompt</p>
+                    <p className="text-sm text-muted-foreground">
+                      Price: ${prompt.price?.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+                {!purchased && (
+                  <Button 
+                    onClick={handlePurchasePrompt}
+                    disabled={isPurchasing}
+                  >
+                    {isPurchasing ? 'Processing...' : 'Purchase Access'}
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Output URL */}
+          {prompt.output_url && canViewContent && (
+            <div className="flex-shrink-0 mb-4">
+              <a 
+                href={prompt.output_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-primary hover:underline"
+              >
+                <ExternalLink className="h-4 w-4" />
+                View Example Output
+              </a>
+            </div>
+          )}
+
+          {/* Prompt Text */}
+          {canViewContent ? (
+            <div className="flex-shrink-0 mb-6">
+              <h3 className="font-semibold mb-2">Prompt</h3>
+              {prompt.prompt_steps && prompt.prompt_steps.length > 0 ? (
+                <div className="space-y-4">
+                  {prompt.prompt_steps
+                    .sort((a, b) => a.step_number - b.step_number)
+                    .map((step) => (
+                      <div key={step.id} className="bg-muted p-4 rounded-lg">
+                        <p className="font-semibold text-sm mb-2">Step {step.step_number}</p>
+                        <pre className="whitespace-pre-wrap text-sm font-mono">{step.step_text}</pre>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <div className="bg-muted p-4 rounded-lg">
+                  <pre className="whitespace-pre-wrap text-sm font-mono">{prompt.prompt_text}</pre>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex-shrink-0 mb-6">
+              <div className="bg-muted p-8 rounded-lg text-center">
+                <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-lg font-semibold mb-2">Purchase Required</p>
+                <p className="text-muted-foreground">
+                  Purchase this prompt to view the full content
+                </p>
+              </div>
+            </div>
+          )}
 
           <Separator className="flex-shrink-0" />
 
@@ -286,30 +397,9 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
               <h3 className="font-semibold">Comments ({prompt.comments_count})</h3>
             </div>
 
-            {/* Add Comment Form */}
-            {user && (
-              <form onSubmit={handleAddComment} className="flex-shrink-0 mb-4">
-                <div className="flex gap-2">
-                  <Textarea
-                    placeholder="Add a comment..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    className="flex-1 min-h-[80px]"
-                  />
-                  <Button 
-                    type="submit" 
-                    disabled={isSubmittingComment || !newComment.trim()}
-                    size="sm"
-                  >
-                    Post
-                  </Button>
-                </div>
-              </form>
-            )}
-
             {/* Comments List */}
-            <ScrollArea className="flex-1">
-              <div className="space-y-4">
+            <ScrollArea className="flex-1 pr-4">
+              <div className="space-y-4 mb-4">
                 {commentsLoading ? (
                   <div className="text-center text-muted-foreground">Loading comments...</div>
                 ) : comments.length === 0 ? (
@@ -348,9 +438,31 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
                 )}
               </div>
             </ScrollArea>
+
+            {/* Add Comment Form - Fixed at bottom */}
+            {user && (
+              <form onSubmit={handleAddComment} className="flex-shrink-0 mt-4 pt-4 border-t">
+                <div className="flex gap-2">
+                  <Textarea
+                    placeholder="Add a comment..."
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    className="flex-1 min-h-[60px]"
+                  />
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmittingComment || !newComment.trim()}
+                    size="sm"
+                  >
+                    Post
+                  </Button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       </DialogContent>
     </Dialog>
+    </>
   );
 };

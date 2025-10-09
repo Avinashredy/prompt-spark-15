@@ -10,22 +10,31 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Upload as UploadIcon, Image, X, Plus } from 'lucide-react';
+import { Upload as UploadIcon, Image, X, Plus, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Upload = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { createPrompt, uploadScreenshot } = usePrompts();
+  const { createPrompt, createPromptSteps, uploadScreenshot } = usePrompts();
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     promptText: '',
     category: '',
-    tags: [] as string[]
+    tags: [] as string[],
+    outputUrl: '',
+    price: '',
+    isPaid: false,
   });
+  const [promptType, setPromptType] = useState<'single' | 'stepwise'>('single');
+  const [promptSteps, setPromptSteps] = useState<{ step_number: number; step_text: string }[]>([
+    { step_number: 1, step_text: '' }
+  ]);
   const [currentTag, setCurrentTag] = useState('');
   const [screenshots, setScreenshots] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -81,13 +90,48 @@ const Upload = () => {
     setScreenshots(prev => prev.filter((_, i) => i !== index));
   };
 
+  const addPromptStep = () => {
+    setPromptSteps(prev => [
+      ...prev,
+      { step_number: prev.length + 1, step_text: '' }
+    ]);
+  };
+
+  const updatePromptStep = (index: number, text: string) => {
+    setPromptSteps(prev => prev.map((step, i) => 
+      i === index ? { ...step, step_text: text } : step
+    ));
+  };
+
+  const removePromptStep = (index: number) => {
+    if (promptSteps.length > 1) {
+      setPromptSteps(prev => 
+        prev.filter((_, i) => i !== index)
+          .map((step, i) => ({ ...step, step_number: i + 1 }))
+      );
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.title || !formData.promptText || !formData.category) {
+    const promptTextToValidate = promptType === 'single' 
+      ? formData.promptText 
+      : promptSteps.every(step => step.step_text.trim());
+
+    if (!formData.title || !promptTextToValidate || !formData.category) {
       toast({
         title: "Missing required fields",
         description: "Please fill in all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (formData.isPaid && (!formData.price || parseFloat(formData.price) <= 0)) {
+      toast({
+        title: "Invalid price",
+        description: "Please set a valid price for paid prompts.",
         variant: "destructive"
       });
       return;
@@ -100,12 +144,23 @@ const Upload = () => {
       const { data: newPrompt, error } = await createPrompt({
         title: formData.title,
         description: formData.description || undefined,
-        prompt_text: formData.promptText,
-        category: formData.category as any
+        prompt_text: promptType === 'single' ? formData.promptText : 'See step-by-step instructions',
+        category: formData.category as any,
+        output_url: formData.outputUrl || undefined,
+        price: formData.isPaid ? parseFloat(formData.price) : 0,
+        is_paid: formData.isPaid,
       });
       
       if (error) {
         throw new Error(error);
+      }
+
+      // If stepwise prompts, create the steps
+      if (promptType === 'stepwise' && newPrompt) {
+        const stepsResult = await createPromptSteps(newPrompt.id, promptSteps);
+        if (stepsResult.error) {
+          throw new Error(stepsResult.error);
+        }
       }
       
       // Upload screenshots if any
@@ -126,9 +181,14 @@ const Upload = () => {
         description: '',
         promptText: '',
         category: '',
-        tags: []
+        tags: [],
+        outputUrl: '',
+        price: '',
+        isPaid: false,
       });
+      setPromptSteps([{ step_number: 1, step_text: '' }]);
       setScreenshots([]);
+      setPromptType('single');
       
       // Navigate to explore page
       navigate('/explore');
@@ -213,21 +273,138 @@ const Upload = () => {
               <CardTitle>Prompt Content</CardTitle>
               <CardDescription>Share the actual prompt text</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="promptText">Prompt Text *</Label>
-                <Textarea
-                  id="promptText"
-                  value={formData.promptText}
-                  onChange={(e) => handleInputChange('promptText', e.target.value)}
-                  placeholder="Paste your prompt here..."
-                  rows={8}
-                  required
+                <Label>Prompt Type</Label>
+                <Select value={promptType} onValueChange={(value: 'single' | 'stepwise') => setPromptType(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">Single Prompt</SelectItem>
+                    <SelectItem value="stepwise">Step-by-Step Prompts</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {promptType === 'single' ? (
+                <div>
+                  <Label htmlFor="promptText">Prompt Text *</Label>
+                  <Textarea
+                    id="promptText"
+                    value={formData.promptText}
+                    onChange={(e) => handleInputChange('promptText', e.target.value)}
+                    placeholder="Paste your prompt here..."
+                    rows={8}
+                    required
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Tip: Include placeholders like [TOPIC] or [STYLE] for variables users can customize
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <Label>Prompt Steps *</Label>
+                  {promptSteps.map((step, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm">Step {step.step_number}</Label>
+                        {promptSteps.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removePromptStep(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <Textarea
+                        value={step.step_text}
+                        onChange={(e) => updatePromptStep(index, e.target.value)}
+                        placeholder={`Enter step ${step.step_number} instructions...`}
+                        rows={4}
+                        required
+                      />
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addPromptStep}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Another Step
+                  </Button>
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="outputUrl">Output URL (Optional)</Label>
+                <Input
+                  id="outputUrl"
+                  value={formData.outputUrl}
+                  onChange={(e) => handleInputChange('outputUrl', e.target.value)}
+                  placeholder="https://example.com/output"
+                  type="url"
                 />
                 <p className="text-sm text-muted-foreground mt-2">
-                  Tip: Include placeholders like [TOPIC] or [STYLE] for variables users can customize
+                  Link to example output or result
                 </p>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Pricing */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Pricing</CardTitle>
+              <CardDescription>Set pricing for your prompt (optional)</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="isPaid">Make this a paid prompt</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Charge users to access this prompt
+                  </p>
+                </div>
+                <Switch
+                  id="isPaid"
+                  checked={formData.isPaid}
+                  onCheckedChange={(checked) => 
+                    setFormData(prev => ({ ...prev, isPaid: checked }))
+                  }
+                />
+              </div>
+
+              {formData.isPaid && (
+                <>
+                  <div>
+                    <Label htmlFor="price">Price (USD) *</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.price}
+                      onChange={(e) => handleInputChange('price', e.target.value)}
+                      placeholder="9.99"
+                      required={formData.isPaid}
+                    />
+                  </div>
+                  
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Commission Structure:</strong> We take 30% platform commission + 10% payment gateway fee. 
+                      You'll receive {formData.price ? `$${(parseFloat(formData.price) * 0.6).toFixed(2)}` : '$0.00'} per sale.
+                    </AlertDescription>
+                  </Alert>
+                </>
+              )}
             </CardContent>
           </Card>
 

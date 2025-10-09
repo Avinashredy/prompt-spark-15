@@ -13,6 +13,9 @@ export interface Prompt {
   comments_count: number;
   created_at: string;
   updated_at: string;
+  output_url?: string | null;
+  price?: number;
+  is_paid?: boolean;
   profiles?: {
     username: string | null;
   } | null;
@@ -20,6 +23,11 @@ export interface Prompt {
     id: string;
     image_url: string;
     alt_text: string | null;
+  }[];
+  prompt_steps?: {
+    id: string;
+    step_number: number;
+    step_text: string;
   }[];
 }
 
@@ -36,12 +44,13 @@ export const usePrompts = () => {
   }) => {
     setLoading(true);
     
-    // First, get prompts with screenshots
+    // First, get prompts with screenshots and steps
     let query = supabase
       .from('prompts')
       .select(`
         *,
-        screenshots (id, image_url, alt_text)
+        screenshots (id, image_url, alt_text),
+        prompt_steps (id, step_number, step_text)
       `);
 
     if (filters?.category && filters.category !== 'all') {
@@ -99,6 +108,9 @@ export const usePrompts = () => {
     description?: string;
     prompt_text: string;
     category: 'art' | 'coding' | 'writing' | 'marketing' | 'business' | 'education' | 'productivity' | 'entertainment' | 'other';
+    output_url?: string;
+    price?: number;
+    is_paid?: boolean;
   }) => {
     if (!user) return { error: 'User not authenticated' };
 
@@ -127,11 +139,32 @@ export const usePrompts = () => {
     const promptWithProfile = {
       ...data,
       profiles: profileData,
-      screenshots: []
+      screenshots: [],
+      prompt_steps: []
     };
 
     setPrompts(prev => [promptWithProfile as any, ...prev]);
     return { data: promptWithProfile };
+  };
+
+  const createPromptSteps = async (promptId: string, steps: { step_number: number; step_text: string }[]) => {
+    if (!user) return { error: 'User not authenticated' };
+
+    const { data, error } = await supabase
+      .from('prompt_steps')
+      .insert(
+        steps.map(step => ({
+          prompt_id: promptId,
+          ...step
+        }))
+      )
+      .select();
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    return { data };
   };
 
   const deletePrompt = async (promptId: string) => {
@@ -200,6 +233,7 @@ export const usePrompts = () => {
     loading,
     fetchPrompts,
     createPrompt,
+    createPromptSteps,
     deletePrompt,
     uploadScreenshot,
   };

@@ -184,6 +184,70 @@ export type Database = {
         }
         Relationships: []
       }
+      prompt_purchases: {
+        Row: {
+          id: string
+          prompt_id: string
+          purchase_price: number
+          purchased_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          prompt_id: string
+          purchase_price: number
+          purchased_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          prompt_id?: string
+          purchase_price?: number
+          purchased_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompt_purchases_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prompt_steps: {
+        Row: {
+          created_at: string
+          id: string
+          prompt_id: string
+          step_number: number
+          step_text: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          prompt_id: string
+          step_number: number
+          step_text: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          prompt_id?: string
+          step_number?: number
+          step_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompt_steps_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prompt_views: {
         Row: {
           id: string
@@ -212,7 +276,10 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_paid: boolean | null
           likes_count: number
+          output_url: string | null
+          price: number | null
           prompt_text: string
           title: string
           updated_at: string
@@ -225,7 +292,10 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_paid?: boolean | null
           likes_count?: number
+          output_url?: string | null
+          price?: number | null
           prompt_text: string
           title: string
           updated_at?: string
@@ -238,7 +308,10 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_paid?: boolean | null
           likes_count?: number
+          output_url?: string | null
+          price?: number | null
           prompt_text?: string
           title?: string
           updated_at?: string
