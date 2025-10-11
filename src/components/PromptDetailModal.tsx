@@ -398,8 +398,8 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
             </div>
 
             {/* Comments List */}
-            <ScrollArea className="flex-1 pr-4">
-              <div className="space-y-4 mb-4">
+            <ScrollArea className="h-[300px] pr-4">
+              <div className="space-y-4 pb-4">
                 {commentsLoading ? (
                   <div className="text-center text-muted-foreground">Loading comments...</div>
                 ) : comments.length === 0 ? (
