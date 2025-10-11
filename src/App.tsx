@@ -10,6 +10,8 @@ import Explore from "./pages/Explore";
 import Trending from "./pages/Trending";
 import Upload from "./pages/Upload";
 import Library from "./pages/Library";
+import CollectionDetail from "./pages/CollectionDetail";
+import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +30,8 @@ const App = () => (
             <Route path="/trending" element={<Trending />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/library" element={<Library />} />
+            <Route path="/collection/:id" element={<CollectionDetail />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

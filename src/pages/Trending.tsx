@@ -2,20 +2,24 @@ import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { usePrompts } from '@/hooks/usePrompts';
 import { useLikes } from '@/hooks/useLikes';
+import { usePromptPurchases } from '@/hooks/usePromptPurchases';
+import { useAuth } from '@/hooks/useAuth';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { PromptDetailModal } from '@/components/PromptDetailModal';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Heart, MessageCircle, User, TrendingUp, Clock, Flame } from 'lucide-react';
+import { Heart, MessageCircle, User, TrendingUp, Clock, Flame, Lock } from 'lucide-react';
 
 const Trending = () => {
+  const { user } = useAuth();
   const [timeframe, setTimeframe] = useState('week');
   const [selectedPrompt, setSelectedPrompt] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { prompts, loading, fetchPrompts } = usePrompts();
   const { isLiked } = useLikes();
+  const { hasPurchased } = usePromptPurchases();
   const { totalViews, newPrompts, activeUsers, loading: analyticsLoading } = useAnalytics();
 
   useEffect(() => {
@@ -116,12 +120,22 @@ const Trending = () => {
               <p className="text-muted-foreground">No trending prompts found.</p>
             </div>
           ) : (
-            prompts.map((prompt, index) => (
+            prompts.map((prompt, index) => {
+              const isPaidAndLocked = prompt.is_paid && !hasPurchased(prompt.id) && prompt.user_id !== user?.id;
+              return (
               <Card 
                 key={prompt.id} 
-                className="cursor-pointer hover:shadow-lg transition-shadow"
+                className="cursor-pointer hover:shadow-lg transition-shadow relative overflow-hidden"
                 onClick={() => handlePromptClick(prompt)}
               >
+                {isPaidAndLocked && (
+                  <div className="absolute inset-0 bg-background/80 backdrop-blur-md z-10 flex flex-col items-center justify-center">
+                    <Lock className="h-12 w-12 mb-4 text-muted-foreground" />
+                    <p className="text-lg font-semibold mb-2">Premium Prompt</p>
+                    <p className="text-sm text-muted-foreground mb-4">${prompt.price}</p>
+                    <Button size="sm" variant="default">Pay to Unlock</Button>
+                  </div>
+                )}
                 <div className="flex flex-col md:flex-row">
                   <div className="md:w-64 aspect-video md:aspect-square bg-muted flex items-center justify-center">
                     {prompt.screenshots && prompt.screenshots.length > 0 ? (
@@ -175,7 +189,8 @@ const Trending = () => {
                   </div>
                 </div>
               </Card>
-            ))
+            );
+            })
           )}
         </div>
 

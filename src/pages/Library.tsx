@@ -11,18 +11,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Heart, MessageCircle, User, Search, Plus, BookOpen, Bookmark, Upload as UploadIcon } from 'lucide-react';
+import { Heart, MessageCircle, User, Search, Plus, BookOpen, Bookmark, Upload as UploadIcon, Trash2, Edit } from 'lucide-react';
 import { CreateCollectionDialog } from '@/components/CreateCollectionDialog';
 import { PromptDetailModal } from '@/components/PromptDetailModal';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Library = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateCollectionOpen, setIsCreateCollectionOpen] = useState(false);
   const [selectedPrompt, setSelectedPrompt] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { prompts, loading, fetchPrompts } = usePrompts();
+  const [promptToDelete, setPromptToDelete] = useState<string | null>(null);
+  const { prompts, loading, fetchPrompts, deletePrompt } = usePrompts();
   const { savedPromptIds } = useSavedPrompts();
   const { userLikes } = useLikes();
   const { collections } = useCollections();
@@ -58,6 +71,17 @@ const Library = () => {
   const filteredCollections = collections.filter((collection) =>
     collection.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleDeletePrompt = async (promptId: string) => {
+    const result = await deletePrompt(promptId);
+    if (result?.error) {
+      toast({ title: "Error", description: result.error, variant: "destructive" });
+    } else {
+      toast({ title: "Success", description: "Prompt deleted successfully" });
+      fetchPrompts();
+    }
+    setPromptToDelete(null);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -125,12 +149,38 @@ const Library = () => {
                 {filteredUserPrompts.map((prompt) => (
                   <Card 
                     key={prompt.id} 
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
+                    className="cursor-pointer hover:shadow-lg transition-shadow relative group"
                     onClick={() => {
                       setSelectedPrompt(prompt);
                       setIsModalOpen(true);
                     }}
                   >
+                    {/* Delete and Edit buttons */}
+                    <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/upload?edit=${prompt.id}`);
+                        }}
+                        className="h-8"
+                      >
+                        <Edit className="h-3 w-3 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPromptToDelete(prompt.id);
+                        }}
+                        className="h-8"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                     <CardHeader>
                       <div className="flex items-center justify-between mb-2">
                         <Badge variant="secondary" className="capitalize">{prompt.category}</Badge>
@@ -308,7 +358,11 @@ const Library = () => {
             {filteredCollections.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredCollections.map((collection) => (
-                  <Card key={collection.id} className="cursor-pointer hover:shadow-lg transition-shadow">
+                  <Card 
+                    key={collection.id} 
+                    className="cursor-pointer hover:shadow-lg transition-shadow"
+                    onClick={() => navigate(`/collection/${collection.id}`)}
+                  >
                     <CardHeader>
                       <div className="flex items-center justify-between mb-2">
                         <Badge variant={collection.is_public ? 'default' : 'secondary'}>
@@ -355,6 +409,26 @@ const Library = () => {
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
       />
+
+      <AlertDialog open={!!promptToDelete} onOpenChange={(open) => !open && setPromptToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Prompt</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this prompt? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => promptToDelete && handleDeletePrompt(promptToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

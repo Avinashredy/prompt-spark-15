@@ -364,8 +364,23 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
                   {prompt.prompt_steps
                     .sort((a, b) => a.step_number - b.step_number)
                     .map((step) => (
-                      <div key={step.id} className="bg-muted p-4 rounded-lg">
-                        <p className="font-semibold text-sm mb-2">Step {step.step_number}</p>
+                      <div key={step.id} className="bg-muted p-4 rounded-lg relative group">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="font-semibold text-sm">Step {step.step_number}</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(step.step_text);
+                              toast({ title: "Copied!", description: `Step ${step.step_number} copied to clipboard` });
+                            }}
+                            className="h-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Copy className="h-4 w-4 mr-1" />
+                            Copy
+                          </Button>
+                        </div>
                         <pre className="whitespace-pre-wrap text-sm font-mono">{step.step_text}</pre>
                       </div>
                     ))}
@@ -388,66 +403,24 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
             </div>
           )}
 
-          <Separator className="flex-shrink-0" />
+          <Separator className="my-6" />
 
           {/* Comments Section */}
-          <div className="flex-1 min-h-0 flex flex-col mt-6">
-            <div className="flex items-center gap-2 mb-4 flex-shrink-0">
+          <div className="mt-6">
+            <div className="flex items-center gap-2 mb-4">
               <MessageCircle className="h-5 w-5" />
               <h3 className="font-semibold">Comments ({prompt.comments_count})</h3>
             </div>
 
-            {/* Comments List */}
-            <ScrollArea className="h-[300px] pr-4">
-              <div className="space-y-4 pb-4">
-                {commentsLoading ? (
-                  <div className="text-center text-muted-foreground">Loading comments...</div>
-                ) : comments.length === 0 ? (
-                  <div className="text-center text-muted-foreground">No comments yet. Be the first to comment!</div>
-                ) : (
-                  comments.map((comment) => (
-                    <div key={comment.id} className="flex gap-3 p-3 bg-muted/50 rounded-lg">
-                      <Avatar className="h-8 w-8 flex-shrink-0">
-                        <AvatarFallback>
-                          {comment.profiles?.username?.[0]?.toUpperCase() || '?'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-sm">
-                            {comment.profiles?.username || 'Anonymous'}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
-                          </span>
-                          {user && comment.user_id === user.id && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteComment(comment.id)}
-                              className="h-6 w-6 p-0 ml-auto"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                        <p className="text-sm">{comment.text}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
-
-            {/* Add Comment Form - Fixed at bottom */}
+            {/* Add Comment Form */}
             {user && (
-              <form onSubmit={handleAddComment} className="flex-shrink-0 mt-4 pt-4 border-t">
+              <form onSubmit={handleAddComment} className="mb-6">
                 <div className="flex gap-2">
                   <Textarea
                     placeholder="Add a comment..."
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
-                    className="flex-1 min-h-[60px]"
+                    className="flex-1 min-h-[80px]"
                   />
                   <Button 
                     type="submit" 
@@ -459,6 +432,46 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
                 </div>
               </form>
             )}
+
+            {/* Comments List with Scroll */}
+            <div className="max-h-[400px] overflow-y-auto space-y-4 pr-2">
+              {commentsLoading ? (
+                <div className="text-center text-muted-foreground py-8">Loading comments...</div>
+              ) : comments.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">No comments yet. Be the first to comment!</div>
+              ) : (
+                comments.map((comment) => (
+                  <div key={comment.id} className="flex gap-3 p-3 bg-muted/50 rounded-lg">
+                    <Avatar className="h-8 w-8 flex-shrink-0">
+                      <AvatarFallback>
+                        {comment.profiles?.username?.[0]?.toUpperCase() || '?'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-sm">
+                          {comment.profiles?.username || 'Anonymous'}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                        </span>
+                        {user && comment.user_id === user.id && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteComment(comment.id)}
+                            className="h-6 w-6 p-0 ml-auto"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-sm">{comment.text}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </DialogContent>

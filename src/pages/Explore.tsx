@@ -6,15 +6,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Heart, MessageCircle, User, Search, Filter } from 'lucide-react';
+import { Heart, MessageCircle, User, Search, Filter, Lock } from 'lucide-react';
 import { usePrompts } from '@/hooks/usePrompts';
 import { useProfile } from '@/hooks/useProfile';
 import { useLikes } from '@/hooks/useLikes';
+import { usePromptPurchases } from '@/hooks/usePromptPurchases';
+import { useAuth } from '@/hooks/useAuth';
 import { PromptDetailModal } from '@/components/PromptDetailModal';
 
 const Explore = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'all');
   const [selectedPrompt, setSelectedPrompt] = useState(null);
@@ -23,6 +26,7 @@ const Explore = () => {
   const { prompts, loading, fetchPrompts } = usePrompts();
   const { profile } = useProfile();
   const { isLiked } = useLikes();
+  const { hasPurchased } = usePromptPurchases();
 
   const categories = [
     { value: 'all', label: 'All Categories' },
@@ -111,12 +115,26 @@ const Explore = () => {
               </Button>
             </div>
           ) : (
-            prompts.map((prompt) => (
+            prompts.map((prompt) => {
+              const isPaidAndLocked = prompt.is_paid && !hasPurchased(prompt.id) && prompt.user_id !== user?.id;
+              return (
               <Card 
                 key={prompt.id} 
-                className="cursor-pointer hover:shadow-lg transition-shadow"
+                className="cursor-pointer hover:shadow-lg transition-shadow relative overflow-hidden"
                 onClick={() => handlePromptClick(prompt)}
               >
+                {/* Paid Prompt Overlay */}
+                {isPaidAndLocked && (
+                  <div className="absolute inset-0 bg-background/80 backdrop-blur-md z-10 flex flex-col items-center justify-center">
+                    <Lock className="h-12 w-12 mb-4 text-muted-foreground" />
+                    <p className="text-lg font-semibold mb-2">Premium Prompt</p>
+                    <p className="text-sm text-muted-foreground mb-4">${prompt.price}</p>
+                    <Button size="sm" variant="default">
+                      Pay to Unlock
+                    </Button>
+                  </div>
+                )}
+                
                 <div className="aspect-video bg-muted rounded-t-lg flex items-center justify-center">
                   {prompt.screenshots && prompt.screenshots.length > 0 ? (
                     <img 
@@ -154,7 +172,8 @@ const Explore = () => {
                   </div>
                 </CardContent>
               </Card>
-            ))
+            );
+            })
           )}
         </div>
 
