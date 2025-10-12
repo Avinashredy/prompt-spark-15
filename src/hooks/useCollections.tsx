@@ -63,6 +63,22 @@ export const useCollections = () => {
   const addPromptToCollection = async (collectionId: string, promptId: string) => {
     if (!user) return { error: 'User not authenticated' };
 
+    // Check if prompt already exists in collection
+    const { data: existing, error: checkError } = await supabase
+      .from('collection_prompts')
+      .select('id')
+      .eq('collection_id', collectionId)
+      .eq('prompt_id', promptId)
+      .maybeSingle();
+
+    if (checkError) {
+      return { error: checkError.message };
+    }
+
+    if (existing) {
+      return { error: 'This prompt is already in the collection' };
+    }
+
     const { error } = await supabase
       .from('collection_prompts')
       .insert([{
