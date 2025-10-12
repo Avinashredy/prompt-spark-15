@@ -44,6 +44,7 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [showCreateCollection, setShowCreateCollection] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
+  const [showCommentInput, setShowCommentInput] = useState(false);
 
   // Track view when modal opens
   useEffect(() => {
@@ -211,7 +212,7 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
         onOpenChange={setShowCreateCollection}
       />
       <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <div className="flex items-center gap-4">
             <div className="flex-1">
@@ -291,10 +292,10 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
           </div>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 flex flex-col">
+        <ScrollArea className="flex-1 pr-4">
           {/* Screenshots */}
           {prompt.screenshots && prompt.screenshots.length > 0 && (
-            <div className="flex-shrink-0 mb-4">
+            <div className="mb-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {prompt.screenshots.map((screenshot) => (
                   <img
@@ -310,14 +311,14 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
 
           {/* Description */}
           {prompt.description && (
-            <div className="flex-shrink-0 mb-4">
+            <div className="mb-4">
               <p className="text-muted-foreground">{prompt.description}</p>
             </div>
           )}
 
           {/* Pricing Info */}
           {isPaid && (
-            <div className="flex-shrink-0 mb-4">
+            <div className="mb-4">
               <div className="bg-muted p-4 rounded-lg flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Lock className="h-5 w-5" />
@@ -342,7 +343,7 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
 
           {/* Output URL */}
           {prompt.output_url && canViewContent && (
-            <div className="flex-shrink-0 mb-4">
+            <div className="mb-4">
               <a 
                 href={prompt.output_url} 
                 target="_blank" 
@@ -357,7 +358,7 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
 
           {/* Prompt Text */}
           {canViewContent ? (
-            <div className="flex-shrink-0 mb-6">
+            <div className="mb-6">
               <h3 className="font-semibold mb-2">Prompt</h3>
               {prompt.prompt_steps && prompt.prompt_steps.length > 0 ? (
                 <div className="space-y-4">
@@ -392,7 +393,7 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
               )}
             </div>
           ) : (
-            <div className="flex-shrink-0 mb-6">
+            <div className="mb-6">
               <div className="bg-muted p-8 rounded-lg text-center">
                 <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                 <p className="text-lg font-semibold mb-2">Purchase Required</p>
@@ -406,35 +407,62 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
           <Separator className="my-6" />
 
           {/* Comments Section */}
-          <div className="mt-6">
-            <div className="flex items-center gap-2 mb-4">
-              <MessageCircle className="h-5 w-5" />
-              <h3 className="font-semibold">Comments ({prompt.comments_count})</h3>
+          <div className="pb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5" />
+                <h3 className="font-semibold">Comments ({prompt.comments_count})</h3>
+              </div>
+              {user && !showCommentInput && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowCommentInput(true)}
+                  className="flex items-center gap-2"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Add Comment
+                </Button>
+              )}
             </div>
 
             {/* Add Comment Form */}
-            {user && (
+            {user && showCommentInput && (
               <form onSubmit={handleAddComment} className="mb-6">
-                <div className="flex gap-2">
+                <div className="space-y-2">
                   <Textarea
                     placeholder="Add a comment..."
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
-                    className="flex-1 min-h-[80px]"
+                    className="min-h-[100px]"
+                    autoFocus
                   />
-                  <Button 
-                    type="submit" 
-                    disabled={isSubmittingComment || !newComment.trim()}
-                    size="sm"
-                  >
-                    Post
-                  </Button>
+                  <div className="flex gap-2 justify-end">
+                    <Button 
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowCommentInput(false);
+                        setNewComment('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={isSubmittingComment || !newComment.trim()}
+                      size="sm"
+                    >
+                      {isSubmittingComment ? 'Posting...' : 'Post Comment'}
+                    </Button>
+                  </div>
                 </div>
               </form>
             )}
 
-            {/* Comments List with Scroll */}
-            <div className="max-h-[400px] overflow-y-auto space-y-4 pr-2">
+            {/* Comments List */}
+            <div className="space-y-4">
               {commentsLoading ? (
                 <div className="text-center text-muted-foreground py-8">Loading comments...</div>
               ) : comments.length === 0 ? (
@@ -473,7 +501,7 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
               )}
             </div>
           </div>
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
     </>
