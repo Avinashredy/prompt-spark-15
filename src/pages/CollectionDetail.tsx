@@ -73,18 +73,52 @@ const CollectionDetail = () => {
       
       const { data: promptsData, error: promptsFetchError } = await supabase
         .from('prompts')
-        .select(`
-          *,
-          profiles (username),
-          screenshots (*),
-          prompt_steps (*)
-        `)
+        .select('*')
         .in('id', promptIds);
 
       if (promptsFetchError) {
         console.error('Error fetching prompts:', promptsFetchError);
-      } else {
-        setPrompts(promptsData || []);
+      } else if (promptsData && promptsData.length > 0) {
+        // Fetch related screenshots (ordered) and profiles separately
+        const { data: screenshotsData, error: screenshotsError } = await supabase
+          .from('screenshots')
+          .select('*')
+          .in('prompt_id', promptIds)
+          .order('display_order', { ascending: true });
+
+        if (screenshotsError) {
+          console.error('Error fetching screenshots:', screenshotsError);
+        }
+
+        const userIds = Array.from(new Set(promptsData.map(p => p.user_id)));
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, username')
+          .in('user_id', userIds);
+
+        if (profilesError) {
+          console.error('Error fetching profiles:', profilesError);
+        }
+
+        const screenshotsMap = new Map<string, any[]>();
+        (screenshotsData || []).forEach(sc => {
+          const arr = screenshotsMap.get(sc.prompt_id) || [];
+          arr.push(sc);
+          screenshotsMap.set(sc.prompt_id, arr);
+        });
+
+        const profilesMap = new Map<string, any>();
+        (profilesData || []).forEach(pr => {
+          profilesMap.set(pr.user_id, pr);
+        });
+
+        const enriched = promptsData.map(p => ({
+          ...p,
+          screenshots: screenshotsMap.get(p.id) || [],
+          profiles: profilesMap.get(p.user_id) || null,
+        }));
+
+        setPrompts(enriched);
       }
     }
 
