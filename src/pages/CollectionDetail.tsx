@@ -62,22 +62,30 @@ const CollectionDetail = () => {
     // Fetch prompts in collection
     const { data: collectionPrompts, error: promptsError } = await supabase
       .from('collection_prompts')
-      .select(`
-        prompt_id,
-        prompts (
+      .select('prompt_id')
+      .eq('collection_id', id);
+
+    if (promptsError) {
+      console.error('Error fetching collection prompts:', promptsError);
+    } else if (collectionPrompts && collectionPrompts.length > 0) {
+      // Fetch the actual prompts
+      const promptIds = collectionPrompts.map(cp => cp.prompt_id);
+      
+      const { data: promptsData, error: promptsFetchError } = await supabase
+        .from('prompts')
+        .select(`
           *,
           profiles (username),
           screenshots (*),
           prompt_steps (*)
-        )
-      `)
-      .eq('collection_id', id);
+        `)
+        .in('id', promptIds);
 
-    if (promptsError) {
-      console.error('Error fetching prompts:', promptsError);
-    } else {
-      const promptsList = collectionPrompts.map(cp => cp.prompts).filter(Boolean);
-      setPrompts(promptsList);
+      if (promptsFetchError) {
+        console.error('Error fetching prompts:', promptsFetchError);
+      } else {
+        setPrompts(promptsData || []);
+      }
     }
 
     setLoading(false);
