@@ -28,8 +28,6 @@ const Upload = () => {
     category: '',
     tags: [] as string[],
     outputUrl: '',
-    price: '',
-    isPaid: false,
   });
   const [promptType, setPromptType] = useState<'single' | 'stepwise'>('single');
   const [promptSteps, setPromptSteps] = useState<{ step_number: number; step_text: string }[]>([
@@ -128,15 +126,6 @@ const Upload = () => {
       return;
     }
 
-    if (formData.isPaid && (!formData.price || parseFloat(formData.price) <= 0)) {
-      toast({
-        title: "Invalid price",
-        description: "Please set a valid price for paid prompts.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setIsUploading(true);
 
     try {
@@ -147,8 +136,8 @@ const Upload = () => {
         prompt_text: promptType === 'single' ? formData.promptText : 'See step-by-step instructions',
         category: formData.category as any,
         output_url: formData.outputUrl || undefined,
-        price: formData.isPaid ? parseFloat(formData.price) : 0,
-        is_paid: formData.isPaid,
+        price: 0,
+        is_paid: false,
       });
       
       if (error) {
@@ -183,8 +172,6 @@ const Upload = () => {
         category: '',
         tags: [],
         outputUrl: '',
-        price: '',
-        isPaid: false,
       });
       setPromptSteps([{ step_number: 1, step_text: '' }]);
       setScreenshots([]);
@@ -357,56 +344,6 @@ const Upload = () => {
             </CardContent>
           </Card>
 
-          {/* Pricing */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Pricing</CardTitle>
-              <CardDescription>Set pricing for your prompt (optional)</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="isPaid">Make this a paid prompt</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Charge users to access this prompt
-                  </p>
-                </div>
-                <Switch
-                  id="isPaid"
-                  checked={formData.isPaid}
-                  onCheckedChange={(checked) => 
-                    setFormData(prev => ({ ...prev, isPaid: checked }))
-                  }
-                />
-              </div>
-
-              {formData.isPaid && (
-                <>
-                  <div>
-                    <Label htmlFor="price">Price (USD) *</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.price}
-                      onChange={(e) => handleInputChange('price', e.target.value)}
-                      placeholder="9.99"
-                      required={formData.isPaid}
-                    />
-                  </div>
-                  
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      <strong>Commission Structure:</strong> We take 30% platform commission + 10% payment gateway fee. 
-                      You'll receive {formData.price ? `$${(parseFloat(formData.price) * 0.6).toFixed(2)}` : '$0.00'} per sale.
-                    </AlertDescription>
-                  </Alert>
-                </>
-              )}
-            </CardContent>
-          </Card>
 
           {/* Tags */}
           <Card>

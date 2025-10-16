@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_revenue: {
+        Row: {
+          ad_impressions: number
+          created_at: string
+          id: string
+          platform_share: number
+          prompt_id: string
+          revenue_amount: number
+          revenue_date: string
+          user_id: string
+          user_share: number
+        }
+        Insert: {
+          ad_impressions?: number
+          created_at?: string
+          id?: string
+          platform_share?: number
+          prompt_id: string
+          revenue_amount?: number
+          revenue_date?: string
+          user_id: string
+          user_share?: number
+        }
+        Update: {
+          ad_impressions?: number
+          created_at?: string
+          id?: string
+          platform_share?: number
+          prompt_id?: string
+          revenue_amount?: number
+          revenue_date?: string
+          user_id?: string
+          user_share?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_revenue_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collection_prompts: {
         Row: {
           added_at: string
@@ -375,6 +419,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      withdrawal_requests: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_details: Json | null
+          payment_method: string | null
+          processed_at: string | null
+          requested_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_details?: Json | null
+          payment_method?: string | null
+          processed_at?: string | null
+          requested_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_details?: Json | null
+          payment_method?: string | null
+          processed_at?: string | null
+          requested_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
