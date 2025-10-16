@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useWithdrawals } from '@/hooks/useWithdrawals';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,26 +11,23 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useWithdrawals } from '@/hooks/useWithdrawals';
-import { BarChart, Eye, Heart, MessageCircle, TrendingUp, DollarSign, Wallet, AlertCircle, CheckCircle, Clock } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { BarChart, Eye, Heart, MessageCircle, TrendingUp, DollarSign, Wallet, Info } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { withdrawals, totalEarnings, createWithdrawalRequest, loading: withdrawalsLoading } = useWithdrawals();
+  const { availableBalance, totalEarnings, withdrawalRequests, loading: withdrawalsLoading, createWithdrawalRequest } = useWithdrawals();
+  
   const [stats, setStats] = useState({
     totalPrompts: 0,
     totalViews: 0,
     totalLikes: 0,
     totalComments: 0,
-    paidPrompts: 0,
-    adRevenue: 0,
   });
   const [topPrompts, setTopPrompts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawalAmount, setWithdrawalAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paymentDetails, setPaymentDetails] = useState('');
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
@@ -47,7 +45,6 @@ const Dashboard = () => {
 
     setLoading(true);
 
-    // Fetch user's prompts with stats
     const { data: prompts, error } = await supabase
       .from('prompts')
       .select('*')
@@ -59,31 +56,18 @@ const Dashboard = () => {
       return;
     }
 
-    // Calculate stats
     const totalPrompts = prompts.length;
     const totalViews = prompts.reduce((sum, p) => sum + p.views_count, 0);
     const totalLikes = prompts.reduce((sum, p) => sum + p.likes_count, 0);
     const totalComments = prompts.reduce((sum, p) => sum + p.comments_count, 0);
-    const paidPrompts = prompts.filter(p => p.is_paid).length;
-
-    // Fetch ad revenue for earnings
-    const { data: adRevenue } = await supabase
-      .from('ad_revenue')
-      .select('user_share')
-      .eq('user_id', user.id);
-
-    const totalAdRevenue = adRevenue ? adRevenue.reduce((sum, r) => sum + Number(r.user_share), 0) : 0;
 
     setStats({
       totalPrompts,
       totalViews,
       totalLikes,
       totalComments,
-      paidPrompts,
-      adRevenue: totalAdRevenue,
     });
 
-    // Get top 5 prompts by views
     const top = [...prompts]
       .sort((a, b) => b.views_count - a.views_count)
       .slice(0, 5);
@@ -92,10 +76,8 @@ const Dashboard = () => {
     setLoading(false);
   };
 
-  const handleWithdrawSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const amount = parseFloat(withdrawAmount);
+  const handleWithdrawalRequest = async () => {
+    const amount = parseFloat(withdrawalAmount);
     
     if (isNaN(amount) || amount < 100) {
       toast({
@@ -106,10 +88,10 @@ const Dashboard = () => {
       return;
     }
 
-    if (amount > totalEarnings) {
+    if (amount > availableBalance) {
       toast({
         title: "Insufficient balance",
-        description: `Your available balance is $${totalEarnings.toFixed(2)}`,
+        description: `You only have $${availableBalance.toFixed(2)} available`,
         variant: "destructive"
       });
       return;
@@ -124,11 +106,7 @@ const Dashboard = () => {
       return;
     }
 
-    const { error } = await createWithdrawalRequest(
-      amount, 
-      paymentMethod, 
-      { details: paymentDetails }
-    );
+    const { error } = await createWithdrawalRequest(amount, paymentMethod, { details: paymentDetails });
 
     if (error) {
       toast({
@@ -139,33 +117,16 @@ const Dashboard = () => {
     } else {
       toast({
         title: "Withdrawal request submitted",
-        description: "Your request will be processed on the 13th of next month (working days only)",
+        description: "Your withdrawal request will be processed on the 13th of next month (working days only)"
       });
-      setWithdrawAmount('');
+      setIsWithdrawDialogOpen(false);
+      setWithdrawalAmount('');
       setPaymentMethod('');
       setPaymentDetails('');
-      setIsWithdrawDialogOpen(false);
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: any; icon: any }> = {
-      pending: { variant: "secondary", icon: Clock },
-      approved: { variant: "default", icon: CheckCircle },
-      completed: { variant: "default", icon: CheckCircle },
-      rejected: { variant: "destructive", icon: AlertCircle },
-    };
-    const config = variants[status] || variants.pending;
-    const Icon = config.icon;
-    return (
-      <Badge variant={config.variant} className="flex items-center gap-1">
-        <Icon className="h-3 w-3" />
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    );
-  };
-
-  if (loading) {
+  if (loading || withdrawalsLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -186,7 +147,7 @@ const Dashboard = () => {
             <BarChart className="h-8 w-8 text-primary" />
             Dashboard
           </h1>
-          <p className="text-muted-foreground">Your prompts performance and insights</p>
+          <p className="text-muted-foreground">Your prompts performance and AdMob revenue</p>
         </div>
 
         {/* Stats Grid */}
@@ -199,7 +160,7 @@ const Dashboard = () => {
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalPrompts}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {stats.paidPrompts} paid prompts
+                Your uploaded prompts
               </p>
             </CardContent>
           </Card>
@@ -245,13 +206,13 @@ const Dashboard = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Ad Revenue</CardTitle>
+              <CardTitle className="text-sm font-medium">Ad Revenue Earnings</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${stats.adRevenue.toFixed(2)}</div>
+              <div className="text-2xl font-bold">${totalEarnings.toFixed(2)}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                Your share (50% split)
+                Total earned from AdMob
               </p>
             </CardContent>
           </Card>
@@ -262,9 +223,9 @@ const Dashboard = () => {
               <Wallet className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${totalEarnings.toFixed(2)}</div>
+              <div className="text-2xl font-bold">${availableBalance.toFixed(2)}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                Ready for withdrawal
+                Ready to withdraw
               </p>
             </CardContent>
           </Card>
@@ -273,97 +234,68 @@ const Dashboard = () => {
         {/* Withdrawal Section */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <Wallet className="h-5 w-5" />
-                Withdrawal Management
-              </span>
-              <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button disabled={totalEarnings < 100}>
-                    Request Withdrawal
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Request Withdrawal</DialogTitle>
-                    <DialogDescription>
-                      Minimum withdrawal: $100. Processing starts on the 13th of each month (working days only).
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleWithdrawSubmit} className="space-y-4">
-                    <div>
-                      <Label htmlFor="amount">Amount (USD)</Label>
-                      <Input
-                        id="amount"
-                        type="number"
-                        step="0.01"
-                        min="100"
-                        max={totalEarnings}
-                        value={withdrawAmount}
-                        onChange={(e) => setWithdrawAmount(e.target.value)}
-                        placeholder="100.00"
-                        required
-                      />
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Available: ${totalEarnings.toFixed(2)}
-                      </p>
-                    </div>
-                    <div>
-                      <Label htmlFor="payment-method">Payment Method</Label>
-                      <Input
-                        id="payment-method"
-                        value={paymentMethod}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                        placeholder="PayPal, Bank Transfer, etc."
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="payment-details">Payment Details</Label>
-                      <Input
-                        id="payment-details"
-                        value={paymentDetails}
-                        onChange={(e) => setPaymentDetails(e.target.value)}
-                        placeholder="Email, account number, etc."
-                        required
-                      />
-                    </div>
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        <strong>Note:</strong> Withdrawal requests are processed on the 13th of each month (working days only). 
-                        Your request will be reviewed and funds transferred within 5-7 business days after approval.
-                      </AlertDescription>
-                    </Alert>
-                    <Button type="submit" className="w-full">
-                      Submit Request
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </CardTitle>
-            <CardDescription>
-              Track your earnings and manage withdrawal requests
-            </CardDescription>
+            <CardTitle>Withdraw Earnings</CardTitle>
+            <CardDescription>Request withdrawal of your AdMob revenue (60% share after platform commission)</CardDescription>
           </CardHeader>
-          <CardContent>
-            {withdrawals.length > 0 ? (
-              <div className="space-y-3">
-                {withdrawals.map((withdrawal) => (
-                  <div key={withdrawal.id} className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                    <div>
-                      <div className="font-semibold">${Number(withdrawal.amount).toFixed(2)}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(withdrawal.requested_at).toLocaleDateString()} via {withdrawal.payment_method || 'N/A'}
-                      </div>
-                    </div>
-                    {getStatusBadge(withdrawal.status)}
+          <CardContent className="space-y-4">
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Withdrawal Policy:</strong>
+                <ul className="list-disc ml-5 mt-2 space-y-1">
+                  <li>Minimum withdrawal: $100</li>
+                  <li>Processed on 13th of each month (working days only)</li>
+                  <li>Revenue split: 60% to you, 40% platform</li>
+                  <li>Processing: 3-5 business days</li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+
+            <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="lg" disabled={availableBalance < 100}>
+                  <Wallet className="h-4 w-4 mr-2" />
+                  Request Withdrawal
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Request Withdrawal</DialogTitle>
+                  <DialogDescription>Available: ${availableBalance.toFixed(2)}</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Amount (USD)</Label>
+                    <Input type="number" min="100" value={withdrawalAmount} onChange={(e) => setWithdrawalAmount(e.target.value)} />
                   </div>
-                ))}
+                  <div>
+                    <Label>Payment Method</Label>
+                    <Input value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} placeholder="PayPal, Bank Transfer" />
+                  </div>
+                  <div>
+                    <Label>Payment Details</Label>
+                    <Input value={paymentDetails} onChange={(e) => setPaymentDetails(e.target.value)} placeholder="email or account" />
+                  </div>
+                  <Button onClick={handleWithdrawalRequest} className="w-full">Submit Request</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {withdrawalRequests.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-3">Recent Requests</h3>
+                <div className="space-y-2">
+                  {withdrawalRequests.slice(0, 5).map((req) => (
+                    <div key={req.id} className="flex justify-between p-3 bg-muted rounded-lg">
+                      <div>
+                        <p className="font-medium">${Number(req.amount).toFixed(2)}</p>
+                        <p className="text-sm text-muted-foreground">{new Date(req.requested_at).toLocaleDateString()}</p>
+                      </div>
+                      <div className="px-3 py-1 rounded-full text-sm">{req.status}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ) : (
-              <p className="text-center text-muted-foreground py-4">No withdrawal requests yet</p>
             )}
           </CardContent>
         </Card>
@@ -405,7 +337,7 @@ const Dashboard = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-center text-muted-foreground py-8">No prompts yet. Create your first prompt to see insights!</p>
+              <p className="text-center text-muted-foreground py-8">No prompts yet!</p>
             )}
           </CardContent>
         </Card>
