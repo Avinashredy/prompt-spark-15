@@ -6,12 +6,7 @@ export const usePromptViews = () => {
 
   const trackView = async (promptId: string) => {
     try {
-      await supabase
-        .from('prompt_views')
-        .insert([{
-          prompt_id: promptId,
-          user_id: user?.id || null,
-        }]);
+      await supabase.rpc('increment_prompt_views', { prompt_id: promptId });
     } catch (error) {
       console.error('Error tracking view:', error);
     }

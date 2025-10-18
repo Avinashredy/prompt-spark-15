@@ -509,7 +509,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_prompt_views: {
+        Args: { prompt_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       monetization_status: "pending" | "approved" | "rejected"
