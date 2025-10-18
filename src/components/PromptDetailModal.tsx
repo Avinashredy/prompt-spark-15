@@ -341,9 +341,31 @@ export const PromptDetailModal = ({ prompt, open, onOpenChange }: PromptDetailMo
             </div>
           )}
 
+          {/* Tool Information */}
+          {prompt.tool_used && (
+            <div className="mb-4">
+              <h3 className="font-semibold mb-2">Tool Used</h3>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">{prompt.tool_used}</Badge>
+                {prompt.tool_url && (
+                  <a 
+                    href={prompt.tool_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-sm text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Visit Tool
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Output URL */}
           {prompt.output_url && canViewContent && (
             <div className="mb-4">
+              <h3 className="font-semibold mb-2">Example Output</h3>
               <a 
                 href={prompt.output_url} 
                 target="_blank" 

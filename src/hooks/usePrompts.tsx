@@ -14,6 +14,8 @@ export interface Prompt {
   created_at: string;
   updated_at: string;
   output_url?: string | null;
+  tool_used?: string | null;
+  tool_url?: string | null;
   price?: number;
   is_paid?: boolean;
   profiles?: {
@@ -109,6 +111,8 @@ export const usePrompts = () => {
     prompt_text: string;
     category: 'art' | 'coding' | 'writing' | 'marketing' | 'business' | 'education' | 'productivity' | 'entertainment' | 'other';
     output_url?: string;
+    tool_used?: string;
+    tool_url?: string;
     price?: number;
     is_paid?: boolean;
   }) => {

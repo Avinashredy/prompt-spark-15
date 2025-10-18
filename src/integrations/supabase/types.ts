@@ -326,6 +326,8 @@ export type Database = {
           price: number | null
           prompt_text: string
           title: string
+          tool_url: string | null
+          tool_used: string | null
           updated_at: string
           user_id: string
           views_count: number
@@ -342,6 +344,8 @@ export type Database = {
           price?: number | null
           prompt_text: string
           title: string
+          tool_url?: string | null
+          tool_used?: string | null
           updated_at?: string
           user_id: string
           views_count?: number
@@ -358,6 +362,8 @@ export type Database = {
           price?: number | null
           prompt_text?: string
           title?: string
+          tool_url?: string | null
+          tool_used?: string | null
           updated_at?: string
           user_id?: string
           views_count?: number

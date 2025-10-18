@@ -28,6 +28,8 @@ const Upload = () => {
     category: '',
     tags: [] as string[],
     outputUrl: '',
+    toolUsed: '',
+    toolUrl: '',
   });
   const [promptType, setPromptType] = useState<'single' | 'stepwise'>('single');
   const [promptSteps, setPromptSteps] = useState<{ step_number: number; step_text: string }[]>([
@@ -136,6 +138,8 @@ const Upload = () => {
         prompt_text: promptType === 'single' ? formData.promptText : 'See step-by-step instructions',
         category: formData.category as any,
         output_url: formData.outputUrl || undefined,
+        tool_used: formData.toolUsed || undefined,
+        tool_url: formData.toolUrl || undefined,
         price: 0,
         is_paid: false,
       });
@@ -172,6 +176,8 @@ const Upload = () => {
         category: '',
         tags: [],
         outputUrl: '',
+        toolUsed: '',
+        toolUrl: '',
       });
       setPromptSteps([{ step_number: 1, step_text: '' }]);
       setScreenshots([]);
@@ -339,6 +345,34 @@ const Upload = () => {
                 />
                 <p className="text-sm text-muted-foreground mt-2">
                   Link to example output or result
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="toolUsed">Tool Used *</Label>
+                <Input
+                  id="toolUsed"
+                  value={formData.toolUsed}
+                  onChange={(e) => handleInputChange('toolUsed', e.target.value)}
+                  placeholder="e.g., ChatGPT, Claude, Midjourney"
+                  required
+                />
+                <p className="text-sm text-muted-foreground mt-2">
+                  Specify which AI tool this prompt is designed for
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="toolUrl">Tool URL (Optional)</Label>
+                <Input
+                  id="toolUrl"
+                  value={formData.toolUrl}
+                  onChange={(e) => handleInputChange('toolUrl', e.target.value)}
+                  placeholder="https://chat.openai.com"
+                  type="url"
+                />
+                <p className="text-sm text-muted-foreground mt-2">
+                  Link to the AI tool's website
                 </p>
               </div>
             </CardContent>
