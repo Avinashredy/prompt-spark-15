@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useWithdrawals } from '@/hooks/useWithdrawals';
+import { useMonetization } from '@/hooks/useMonetization';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,13 +12,14 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { BarChart, Eye, Heart, MessageCircle, TrendingUp, DollarSign, Wallet, Info } from 'lucide-react';
+import { BarChart, Eye, Heart, MessageCircle, TrendingUp, DollarSign, Wallet, Info, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { availableBalance, totalEarnings, withdrawalRequests, loading: withdrawalsLoading, createWithdrawalRequest } = useWithdrawals();
+  const { monetizationStatus, eligibility, loading: monetizationLoading, isMonetized, requestMonetization } = useMonetization();
   
   const [stats, setStats] = useState({
     totalPrompts: 0,
@@ -126,7 +128,23 @@ const Dashboard = () => {
     }
   };
 
-  if (loading || withdrawalsLoading) {
+  const handleMonetizationRequest = async () => {
+    const { error } = await requestMonetization();
+    if (error) {
+      toast({
+        title: "Request failed",
+        description: error,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Monetization requested",
+        description: "Your request is under review. You'll be notified once approved."
+      });
+    }
+  };
+
+  if (loading || withdrawalsLoading || monetizationLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -149,6 +167,70 @@ const Dashboard = () => {
           </h1>
           <p className="text-muted-foreground">Your prompts performance and AdMob revenue</p>
         </div>
+
+        {/* Monetization Status */}
+        <Card className="mb-8 border-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {isMonetized ? (
+                <><CheckCircle className="h-5 w-5 text-green-500" /> Monetization Active</>
+              ) : monetizationStatus?.status === 'pending' ? (
+                <><Clock className="h-5 w-5 text-yellow-500" /> Monetization Pending</>
+              ) : monetizationStatus?.status === 'rejected' ? (
+                <><XCircle className="h-5 w-5 text-red-500" /> Monetization Rejected</>
+              ) : (
+                <><Info className="h-5 w-5 text-muted-foreground" /> Monetization Status</>
+              )}
+            </CardTitle>
+            <CardDescription>
+              {isMonetized 
+                ? "You can earn ad revenue from your prompts"
+                : "Meet the requirements to start earning"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Prompts (last 30 days)</span>
+                <span className={`font-semibold ${eligibility.recentPromptsCount >= eligibility.requiredPrompts ? 'text-green-500' : 'text-muted-foreground'}`}>
+                  {eligibility.recentPromptsCount} / {eligibility.requiredPrompts}
+                  {eligibility.recentPromptsCount >= eligibility.requiredPrompts && <CheckCircle className="inline h-4 w-4 ml-1" />}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Total views (last 90 days)</span>
+                <span className={`font-semibold ${eligibility.totalViews >= eligibility.requiredViews ? 'text-green-500' : 'text-muted-foreground'}`}>
+                  {eligibility.totalViews.toLocaleString()} / {eligibility.requiredViews.toLocaleString()}
+                  {eligibility.totalViews >= eligibility.requiredViews && <CheckCircle className="inline h-4 w-4 ml-1" />}
+                </span>
+              </div>
+            </div>
+
+            {!isMonetized && !monetizationStatus && eligibility.meetsRequirements && (
+              <Button onClick={handleMonetizationRequest} className="w-full" size="lg">
+                Request Monetization
+              </Button>
+            )}
+
+            {monetizationStatus?.status === 'pending' && (
+              <Alert>
+                <Clock className="h-4 w-4" />
+                <AlertDescription>
+                  Your monetization request is being reviewed. You'll be notified once it's approved.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {monetizationStatus?.status === 'rejected' && (
+              <Alert variant="destructive">
+                <XCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Your monetization request was rejected. {monetizationStatus.rejected_at && `Rejected on ${new Date(monetizationStatus.rejected_at).toLocaleDateString()}`}
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -231,74 +313,76 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Withdrawal Section */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Withdraw Earnings</CardTitle>
-            <CardDescription>Request withdrawal of your AdMob revenue (60% share after platform commission)</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Withdrawal Policy:</strong>
-                <ul className="list-disc ml-5 mt-2 space-y-1">
-                  <li>Minimum withdrawal: $100</li>
-                  <li>Processed on 13th of each month (working days only)</li>
-                  <li>Revenue split: 60% to you, 40% platform</li>
-                  <li>Processing: 3-5 business days</li>
-                </ul>
-              </AlertDescription>
-            </Alert>
+        {/* Withdrawal Section - Only for monetized users */}
+        {isMonetized && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Withdraw Earnings</CardTitle>
+              <CardDescription>Request withdrawal of your AdSense revenue (60% share after platform commission)</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Withdrawal Policy:</strong>
+                  <ul className="list-disc ml-5 mt-2 space-y-1">
+                    <li>Minimum withdrawal: $100</li>
+                    <li>Processed on 13th of each month (working days only)</li>
+                    <li>Revenue split: 60% to you, 40% platform</li>
+                    <li>Processing: 3-5 business days</li>
+                  </ul>
+                </AlertDescription>
+              </Alert>
 
-            <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="lg" disabled={availableBalance < 100}>
-                  <Wallet className="h-4 w-4 mr-2" />
-                  Request Withdrawal
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Request Withdrawal</DialogTitle>
-                  <DialogDescription>Available: ${availableBalance.toFixed(2)}</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label>Amount (USD)</Label>
-                    <Input type="number" min="100" value={withdrawalAmount} onChange={(e) => setWithdrawalAmount(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label>Payment Method</Label>
-                    <Input value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} placeholder="PayPal, Bank Transfer" />
-                  </div>
-                  <div>
-                    <Label>Payment Details</Label>
-                    <Input value={paymentDetails} onChange={(e) => setPaymentDetails(e.target.value)} placeholder="email or account" />
-                  </div>
-                  <Button onClick={handleWithdrawalRequest} className="w-full">Submit Request</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            {withdrawalRequests.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold mb-3">Recent Requests</h3>
-                <div className="space-y-2">
-                  {withdrawalRequests.slice(0, 5).map((req) => (
-                    <div key={req.id} className="flex justify-between p-3 bg-muted rounded-lg">
-                      <div>
-                        <p className="font-medium">${Number(req.amount).toFixed(2)}</p>
-                        <p className="text-sm text-muted-foreground">{new Date(req.requested_at).toLocaleDateString()}</p>
-                      </div>
-                      <div className="px-3 py-1 rounded-full text-sm">{req.status}</div>
+              <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="lg" disabled={availableBalance < 100}>
+                    <Wallet className="h-4 w-4 mr-2" />
+                    Request Withdrawal
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Request Withdrawal</DialogTitle>
+                    <DialogDescription>Available: ${availableBalance.toFixed(2)}</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Amount (USD)</Label>
+                      <Input type="number" min="100" value={withdrawalAmount} onChange={(e) => setWithdrawalAmount(e.target.value)} />
                     </div>
-                  ))}
+                    <div>
+                      <Label>Payment Method</Label>
+                      <Input value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} placeholder="PayPal, Bank Transfer" />
+                    </div>
+                    <div>
+                      <Label>Payment Details</Label>
+                      <Input value={paymentDetails} onChange={(e) => setPaymentDetails(e.target.value)} placeholder="email or account" />
+                    </div>
+                    <Button onClick={handleWithdrawalRequest} className="w-full">Submit Request</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {withdrawalRequests.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold mb-3">Recent Requests</h3>
+                  <div className="space-y-2">
+                    {withdrawalRequests.slice(0, 5).map((req) => (
+                      <div key={req.id} className="flex justify-between p-3 bg-muted rounded-lg">
+                        <div>
+                          <p className="font-medium">${Number(req.amount).toFixed(2)}</p>
+                          <p className="text-sm text-muted-foreground">{new Date(req.requested_at).toLocaleDateString()}</p>
+                        </div>
+                        <div className="px-3 py-1 rounded-full text-sm">{req.status}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Top Prompts */}
         <Card>

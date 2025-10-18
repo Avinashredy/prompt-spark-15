@@ -426,6 +426,42 @@ export type Database = {
           },
         ]
       }
+      user_monetization: {
+        Row: {
+          approved_at: string | null
+          created_at: string
+          id: string
+          is_monetized: boolean
+          rejected_at: string | null
+          requested_at: string
+          status: Database["public"]["Enums"]["monetization_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          created_at?: string
+          id?: string
+          is_monetized?: boolean
+          rejected_at?: string | null
+          requested_at?: string
+          status?: Database["public"]["Enums"]["monetization_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          created_at?: string
+          id?: string
+          is_monetized?: boolean
+          rejected_at?: string | null
+          requested_at?: string
+          status?: Database["public"]["Enums"]["monetization_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       withdrawal_requests: {
         Row: {
           amount: number
@@ -476,6 +512,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      monetization_status: "pending" | "approved" | "rejected"
       prompt_category:
         | "art"
         | "coding"
@@ -613,6 +650,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      monetization_status: ["pending", "approved", "rejected"],
       prompt_category: [
         "art",
         "coding",
