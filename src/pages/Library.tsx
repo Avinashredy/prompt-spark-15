@@ -6,6 +6,7 @@ import { useLikes } from '@/hooks/useLikes';
 import { useSavedPrompts } from '@/hooks/useSavedPrompts';
 import { useCollections } from '@/hooks/useCollections';
 import Navbar from '@/components/Navbar';
+import AdSenseAd from '@/components/AdSenseAd';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -146,67 +147,72 @@ const Library = () => {
               </div>
             ) : filteredUserPrompts.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredUserPrompts.map((prompt) => (
-                  <Card 
-                    key={prompt.id} 
-                    className="cursor-pointer hover:shadow-lg transition-shadow relative group"
-                    onClick={() => {
-                      setSelectedPrompt(prompt);
-                      setIsModalOpen(true);
-                    }}
-                  >
-                    {/* Delete and Edit buttons */}
-                    <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/upload?edit=${prompt.id}`);
-                        }}
-                        className="h-8"
-                      >
-                        <Edit className="h-3 w-3 mr-1" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPromptToDelete(prompt.id);
-                        }}
-                        className="h-8"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    <CardHeader>
-                      <div className="flex items-center justify-between mb-2">
-                        <Badge variant="secondary" className="capitalize">{prompt.category}</Badge>
-                        <Badge variant="default">Published</Badge>
+                {filteredUserPrompts.map((prompt, index) => (
+                  <div key={prompt.id}>
+                    <Card 
+                      className="cursor-pointer hover:shadow-lg transition-shadow relative group"
+                      onClick={() => {
+                        setSelectedPrompt(prompt);
+                        setIsModalOpen(true);
+                      }}
+                    >
+                      {/* Delete and Edit buttons */}
+                      <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/upload?edit=${prompt.id}`);
+                          }}
+                          className="h-8"
+                        >
+                          <Edit className="h-3 w-3 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPromptToDelete(prompt.id);
+                          }}
+                          className="h-8"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
-                      <CardTitle className="text-lg">{prompt.title}</CardTitle>
-                      <CardDescription>{prompt.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-4 text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Heart className="h-4 w-4" />
-                            {prompt.likes_count}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <MessageCircle className="h-4 w-4" />
-                            {prompt.comments_count}
-                          </div>
+                      <CardHeader>
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge variant="secondary" className="capitalize">{prompt.category}</Badge>
+                          <Badge variant="default">Published</Badge>
                         </div>
-                        <span className="text-muted-foreground">
-                          {new Date(prompt.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                        <CardTitle className="text-lg">{prompt.title}</CardTitle>
+                        <CardDescription>{prompt.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-4 text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Heart className="h-4 w-4" />
+                              {prompt.likes_count}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <MessageCircle className="h-4 w-4" />
+                              {prompt.comments_count}
+                            </div>
+                          </div>
+                          <span className="text-muted-foreground">
+                            {new Date(prompt.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    {/* Insert ad after every 3 prompts */}
+                    {(index + 1) % 3 === 0 && index < filteredUserPrompts.length - 1 && (
+                      <AdSenseAd adSlot="LIBRARY_AD_SLOT" adFormat="rectangle" className="mt-6" />
+                    )}
+                  </div>
                 ))}
               </div>
             ) : (
