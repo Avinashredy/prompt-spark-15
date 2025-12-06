@@ -6,6 +6,7 @@ import { usePromptPurchases } from '@/hooks/usePromptPurchases';
 import { useAuth } from '@/hooks/useAuth';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { PromptDetailModal } from '@/components/PromptDetailModal';
+import AdSenseAd from '@/components/AdSenseAd';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -123,72 +124,77 @@ const Trending = () => {
             prompts.map((prompt, index) => {
               const isPaidAndLocked = prompt.is_paid && !hasPurchased(prompt.id) && prompt.user_id !== user?.id;
               return (
-              <Card 
-                key={prompt.id} 
-                className="cursor-pointer hover:shadow-lg transition-shadow relative overflow-hidden"
-                onClick={() => handlePromptClick(prompt)}
-              >
-                {isPaidAndLocked && (
-                  <div className="absolute inset-0 bg-background/80 backdrop-blur-md z-10 flex flex-col items-center justify-center">
-                    <Lock className="h-12 w-12 mb-4 text-muted-foreground" />
-                    <p className="text-lg font-semibold mb-2">Premium Prompt</p>
-                    <p className="text-sm text-muted-foreground mb-4">${prompt.price}</p>
-                    <Button size="sm" variant="default">Pay to Unlock</Button>
+              <div key={prompt.id}>
+                <Card 
+                  className="cursor-pointer hover:shadow-lg transition-shadow relative overflow-hidden"
+                  onClick={() => handlePromptClick(prompt)}
+                >
+                  {isPaidAndLocked && (
+                    <div className="absolute inset-0 bg-background/80 backdrop-blur-md z-10 flex flex-col items-center justify-center">
+                      <Lock className="h-12 w-12 mb-4 text-muted-foreground" />
+                      <p className="text-lg font-semibold mb-2">Premium Prompt</p>
+                      <p className="text-sm text-muted-foreground mb-4">${prompt.price}</p>
+                      <Button size="sm" variant="default">Pay to Unlock</Button>
+                    </div>
+                  )}
+                  <div className="flex flex-col md:flex-row">
+                    <div className="md:w-64 aspect-video md:aspect-square bg-muted flex items-center justify-center">
+                      {prompt.screenshots && prompt.screenshots.length > 0 ? (
+                        <img 
+                          src={prompt.screenshots[0].image_url} 
+                          alt={prompt.screenshots[0].alt_text || prompt.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="text-muted-foreground">No preview</div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <CardHeader>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            <div className={`flex items-center gap-1 font-bold text-lg ${getRankColor(index + 1)}`}>
+                              {getRankIcon(index + 1)}
+                              #{index + 1}
+                            </div>
+                            <Badge variant="secondary" className="capitalize">{prompt.category}</Badge>
+                            <Badge variant="outline" className="text-green-600">
+                              Trending
+                            </Badge>
+                          </div>
+                        </div>
+                        <CardTitle className="text-xl">{prompt.title}</CardTitle>
+                        <CardDescription className="text-base">{prompt.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-2">
+                              <Heart className={`h-4 w-4 ${isLiked(prompt.id) ? 'fill-current text-red-500' : 'text-red-500'}`} />
+                              <span className="font-medium">{prompt.likes_count}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <MessageCircle className="h-4 w-4 text-blue-500" />
+                              <span className="font-medium">{prompt.comments_count}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              <span>{prompt.profiles?.username || 'Anonymous'}</span>
+                            </div>
+                          </div>
+                          <Button variant="outline" size="sm">
+                            View Details
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </div>
                   </div>
+                </Card>
+                {/* Insert ad after every 3 prompts */}
+                {(index + 1) % 3 === 0 && index < prompts.length - 1 && (
+                  <AdSenseAd adSlot="TRENDING_AD_SLOT" adFormat="horizontal" className="my-6" />
                 )}
-                <div className="flex flex-col md:flex-row">
-                  <div className="md:w-64 aspect-video md:aspect-square bg-muted flex items-center justify-center">
-                    {prompt.screenshots && prompt.screenshots.length > 0 ? (
-                      <img 
-                        src={prompt.screenshots[0].image_url} 
-                        alt={prompt.screenshots[0].alt_text || prompt.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="text-muted-foreground">No preview</div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <CardHeader>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <div className={`flex items-center gap-1 font-bold text-lg ${getRankColor(index + 1)}`}>
-                            {getRankIcon(index + 1)}
-                            #{index + 1}
-                          </div>
-                          <Badge variant="secondary" className="capitalize">{prompt.category}</Badge>
-                          <Badge variant="outline" className="text-green-600">
-                            Trending
-                          </Badge>
-                        </div>
-                      </div>
-                      <CardTitle className="text-xl">{prompt.title}</CardTitle>
-                      <CardDescription className="text-base">{prompt.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            <Heart className={`h-4 w-4 ${isLiked(prompt.id) ? 'fill-current text-red-500' : 'text-red-500'}`} />
-                            <span className="font-medium">{prompt.likes_count}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <MessageCircle className="h-4 w-4 text-blue-500" />
-                            <span className="font-medium">{prompt.comments_count}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4" />
-                            <span>{prompt.profiles?.username || 'Anonymous'}</span>
-                          </div>
-                        </div>
-                        <Button variant="outline" size="sm">
-                          View Details
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </div>
-                </div>
-              </Card>
+              </div>
             );
             })
           )}
